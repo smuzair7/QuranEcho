@@ -1,0 +1,153 @@
+import 'package:flutter/material.dart';
+import '../widgets/menu_card.dart';
+
+class HomePage extends StatelessWidget {
+  const HomePage({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [
+              Theme.of(context).colorScheme.primary.withOpacity(0.8),
+              Theme.of(context).colorScheme.primaryContainer,
+            ],
+          ),
+        ),
+        child: SafeArea(
+          child: Column(
+            children: [
+              // Reduced top padding
+              const SizedBox(height: 30),
+              
+              // Logo and App Name
+              CircleAvatar(
+                radius: 50, // Reduced size from 60 to 50
+                backgroundColor: Colors.white.withOpacity(0.9),
+                child: Padding(
+                  padding: const EdgeInsets.all(10.0), // Reduced padding from 12 to 10
+                  child: Image.asset(
+                    'assets/images/quran_logo.png',
+                    errorBuilder: (context, error, stackTrace) => 
+                      const Icon(Icons.menu_book, size: 50, color: Color(0xFF1F8A70)), // Reduced size from 60 to 50
+                  ),
+                ),
+              ),
+              const SizedBox(height: 20), // Reduced from 24 to 20
+              Text(
+                'Quran Echo',
+                style: TextStyle(
+                  fontSize: 32, // Reduced from 36 to 32
+                  fontWeight: FontWeight.bold,
+                  color: Theme.of(context).colorScheme.onPrimary,
+                ),
+              ),
+              const SizedBox(height: 8), // Reduced from 10 to 8
+              Text(
+                'Learn and Memorize the Quran',
+                style: TextStyle(
+                  fontSize: 16,
+                  color: Theme.of(context).colorScheme.onPrimary.withOpacity(0.8),
+                ),
+              ),
+              const SizedBox(height: 40), // Reduced from 60 to 40
+              
+              // Menu Options
+              Expanded(
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).colorScheme.background,
+                    borderRadius: const BorderRadius.only(
+                      topLeft: Radius.circular(30),
+                      topRight: Radius.circular(30),
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.1),
+                        blurRadius: 10,
+                        offset: const Offset(0, -5),
+                      ),
+                    ],
+                  ),
+                  child: SingleChildScrollView( // Added SingleChildScrollView to handle potential overflow
+                    child: Column(
+                      children: [
+                        const SizedBox(height: 30),
+                        Text(
+                          'Select an Option',
+                          style: TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.w500,
+                            color: Theme.of(context).colorScheme.onBackground,
+                          ),
+                        ),
+                        const SizedBox(height: 25), // Reduced from 30 to 25
+                        
+                        // First row with Makharij and Hifz cards
+                        Padding( // Added padding to ensure cards don't extend beyond screen edges
+                          padding: const EdgeInsets.only(bottom: 20.0),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                            children: [
+                              // Makharij Card
+                              Flexible(
+                                child: MenuCard(
+                                  title: 'Makharij',
+                                  description: 'Learn proper pronunciation',
+                                  icon: Icons.record_voice_over,
+                                  color: const Color(0xFF1F8A70),
+                                  onTap: () => Navigator.pushNamed(context, '/makharij'),
+                                ),
+                              ),
+                              
+                              const SizedBox(width: 10), // Add spacing between cards
+                              
+                              // Hifz Card
+                              Flexible(
+                                child: MenuCard(
+                                  title: 'Hifz',
+                                  description: 'Memorize the Quran',
+                                  icon: Icons.auto_stories,
+                                  color: const Color(0xFF00A896),
+                                  onTap: () => Navigator.pushNamed(context, '/hifz'),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        
+                        const SizedBox(height: 20), // Add spacing between rows
+                        
+                        // Second row with only Lehja card centered
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 20.0),
+                          child: Center(
+                            child: SizedBox(
+                              width: 150, // Match the width of cards in the first row
+                              child: MenuCard(
+                                title: 'Lehja',
+                                description: 'Learn recitation styles',
+                                icon: Icons.headphones,
+                                color: const Color(0xFF05668D),
+                                onTap: () => Navigator.pushNamed(context, '/lehja'),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
