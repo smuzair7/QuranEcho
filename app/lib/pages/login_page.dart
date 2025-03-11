@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../services/auth_service.dart';
+import '../services/user_provider.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -9,50 +11,44 @@ class LoginPage extends StatefulWidget {
 }
 
 class _LoginPageState extends State<LoginPage> {
+  final TextEditingController _usernameController = TextEditingController();
+  final TextEditingController _passwordController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
-  final _usernameController = TextEditingController();
-  final _passwordController = TextEditingController();
-  final _authService = AuthService();
-  
   bool _isLoading = false;
   String _errorMessage = '';
 
-  @override
-  void dispose() {
-    _usernameController.dispose();
-    _passwordController.dispose();
-    super.dispose();
-  }
-
   Future<void> _login() async {
-    if (!_formKey.currentState!.validate()) {
-      return;
-    }
+    if (!_formKey.currentState!.validate()) return;
 
     setState(() {
       _isLoading = true;
       _errorMessage = '';
     });
 
-    final response = await _authService.login(
-      _usernameController.text,
-      _passwordController.text,
-    );
-
-    setState(() {
-      _isLoading = false;
-    });
-
-    if (response['success']) {
-      // Navigate to home page
-      if (!mounted) return;
-      Navigator.pushReplacementNamed(context, '/');
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Welcome, ${_usernameController.text}!')),
+    try {
+      final authService = AuthService();
+      final result = await authService.login(
+        _usernameController.text,
+        _passwordController.text,
       );
-    } else {
+
+      if (result['success']) {
+        // Update the user provider when login is successful
+        if (mounted) {
+          Provider.of<UserProvider>(context, listen: false)
+            .login(_usernameController.text);
+          Navigator.pop(context);
+        }
+      } else {
+        setState(() {
+          _errorMessage = result['message'] ?? 'Login failed';
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
       setState(() {
-        _errorMessage = response['message'];
+        _errorMessage = 'Error connecting to server: ${e.toString()}';
+        _isLoading = false;
       });
     }
   }
@@ -60,6 +56,11 @@ class _LoginPageState extends State<LoginPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      appBar: AppBar(
+        title: const Text('Login'),
+        backgroundColor: const Color(0xFF00A896),
+        foregroundColor: Colors.white,
+      ),
       body: Container(
         decoration: BoxDecoration(
           gradient: LinearGradient(
@@ -198,22 +199,21 @@ class _LoginPageState extends State<LoginPage> {
                             onPressed: _isLoading ? null : _login,
                             style: ElevatedButton.styleFrom(
                               backgroundColor: const Color(0xFF1F8A70),
-                              foregroundColor: Colors.white,
                               padding: const EdgeInsets.symmetric(vertical: 16),
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(12),
                               ),
                             ),
-                            child: _isLoading 
-                              ? const SizedBox(
-                                  width: 20, 
-                                  height: 20, 
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2,
-                                    color: Colors.white,
-                                  ),
-                                )
-                              : const Text('Log In'),
+                            child: _isLoading
+                                ? const SizedBox(
+                                    height: 20,
+                                    width: 20,
+                                    child: CircularProgressIndicator(
+                                      color: Colors.white,
+                                      strokeWidth: 2,
+                                    ),
+                                  )
+                                : const Text('Log In'),
                           ),
                           
                           const SizedBox(height: 16),
@@ -242,5 +242,12 @@ class _LoginPageState extends State<LoginPage> {
         ),
       ),
     );
+  }
+  
+  @override
+  void dispose() {
+    _usernameController.dispose();
+    _passwordController.dispose();
+    super.dispose();
   }
 }

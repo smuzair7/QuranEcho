@@ -1,12 +1,78 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../services/user_provider.dart';
 import '../widgets/menu_card.dart';
+import '../pages/login_page.dart';
 
 class HomePage extends StatelessWidget {
   const HomePage({super.key});
 
   @override
   Widget build(BuildContext context) {
+    // Access the user provider
+    final userProvider = Provider.of<UserProvider>(context);
+    
     return Scaffold(
+      appBar: AppBar(
+        title: const Text('Quran Echo'),
+        backgroundColor: const Color(0xFF00A896),
+        foregroundColor: Colors.white,
+        elevation: 0,
+        actions: [
+          // Show either username with logout option or login button
+          if (userProvider.isLoggedIn)
+            PopupMenuButton<String>(
+              onSelected: (value) {
+                if (value == 'logout') {
+                  userProvider.logout();
+                }
+              },
+              offset: const Offset(0, 50),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                child: Row(
+                  children: [
+                    const Icon(Icons.person, color: Colors.white),
+                    const SizedBox(width: 8),
+                    Text(
+                      userProvider.username ?? '',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              itemBuilder: (BuildContext context) => [
+                const PopupMenuItem<String>(
+                  value: 'logout',
+                  child: Row(
+                    children: [
+                      Icon(Icons.logout, color: Colors.red),
+                      SizedBox(width: 8),
+                      Text('Logout'),
+                    ],
+                  ),
+                ),
+              ],
+            )
+          else
+            TextButton.icon(
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const LoginPage()),
+                );
+              },
+              icon: const Icon(Icons.login, color: Colors.white),
+              label: const Text(
+                'Login',
+                style: TextStyle(color: Colors.white),
+              ),
+            ),
+        ],
+      ),
       body: Container(
         decoration: BoxDecoration(
           gradient: LinearGradient(

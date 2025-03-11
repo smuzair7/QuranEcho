@@ -7,9 +7,16 @@ import 'pages/recite_page.dart';
 import 'pages/recite_select_qari_page.dart';
 import 'pages/login_page.dart';  // Add this import
 import 'pages/signup_page.dart';  // Add this import
+import 'package:provider/provider.dart';
+import 'services/user_provider.dart';
 
 void main() {
-  runApp(const QuranEchoApp());
+  runApp(
+    ChangeNotifierProvider(
+      create: (context) => UserProvider(),
+      child: const QuranEchoApp(),
+    ),
+  );
 }
 
 class QuranEchoApp extends StatelessWidget {
@@ -39,7 +46,7 @@ class QuranEchoApp extends StatelessWidget {
         ),
       ),
       themeMode: ThemeMode.system,
-      initialRoute: '/login', // Change initial route to login
+      
       routes: {
         '/': (context) => const HomePage(),
         '/makharij': (context) => const MakharijPracticePage(),
