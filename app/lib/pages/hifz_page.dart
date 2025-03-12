@@ -1,15 +1,574 @@
 import 'dart:io';
-import 'dart:convert';
-import 'dart:math' show min;  // Add this import for the min function
+import 'dart:convert'; 
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:record/record.dart';
 import 'package:just_audio/just_audio.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as path;
 import 'package:http/http.dart' as http;
+import 'dart:math' show min;
 
 class HifzPage extends StatefulWidget {
   const HifzPage({super.key});
+
+  @override
+  State<HifzPage> createState() => _HifzPageState();
+}
+
+class _HifzPageState extends State<HifzPage> {
+  // Audio recording variables
+  final _audioRecorder = AudioRecorder();
+  final _audioPlayer = AudioPlayer();
+  bool _isRecording = false;
+  bool _isPlaying = false;
+  String? _recordingPath;
+  String _recordingStatus = 'Tap to start recording';
+  
+  // API variables
+  static const String _apiToken = "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";
+  static const String _apiUrl = "https://api-inference.huggingface.co/models/tarteel-ai/whisper-base-ar-quran";
+  bool _isProcessing = false;
+  String? _apiResult;
+  String? _transcription;
+  
+  // Real-time streaming variables
+  bool _isStreaming = false;
+  Timer? _streamingTimer;
+  StreamController<List<int>>? _audioStreamController;
+  String _streamingStatus = '';
+  final int _streamIntervalMs = 3000; // Send audio chunks every 3 seconds
+  DateTime? _recordingStartTime;
+  File? _currentAudioFile;
+  bool _isTranscribing = false;
+  String _liveTranscription = '';
+  int _chunkCounter = 0;
+
+  @override
+  void dispose() {
+    _stopStreaming();
+    _audioRecorder.dispose();
+    _audioPlayer.dispose();
+    _audioStreamController?.close();
+    _streamingTimer?.cancel();
+    super.dispose();
+  }
+
+  // Start real-time streaming and transcription
+  Future<void> _startStreaming() async {
+    try {
+      // Request permissions
+      final hasPermission = await _audioRecorder.hasPermission();
+      if (!hasPermission) {
+        setState(() {
+          _recordingStatus = 'Permission denied for recording';
+        });
+        return;
+      }
+      
+      // Create a temporary directory for storing audio chunks
+      final directory = await getTemporaryDirectory();
+      String fileName = 'streaming_${DateTime.now().millisecondsSinceEpoch}.wav';
+      final filePath = path.join(directory.path, fileName);
+      _currentAudioFile = File(filePath);
+      
+      // Configure recording for WAV format
+      final config = RecordConfig(
+        encoder: AudioEncoder.wav,
+        sampleRate: 16000, // 16kHz for better speech recognition
+        numChannels: 1, // Mono recording for API efficiency
+      );
+      
+      // Start recording
+      await _audioRecorder.start(config, path: filePath);
+      _recordingStartTime = DateTime.now();
+      
+      setState(() {
+        _isStreaming = true;
+        _isRecording = true;
+        _recordingStatus = 'Real-time transcription active...';
+        _recordingPath = filePath;
+        _liveTranscription = 'Listening...';
+      });
+      
+      // Set up timer to send audio chunks periodically
+      _streamingTimer = Timer.periodic(Duration(milliseconds: _streamIntervalMs), (timer) {
+        _processAudioChunk();
+      });
+      
+    } catch (e) {
+      setState(() {
+        _recordingStatus = 'Streaming error: ${e.toString()}';
+      });
+    }
+  }
+  
+  // Process audio chunks for real-time transcription
+  Future<void> _processAudioChunk() async {
+    if (!_isStreaming || _isTranscribing) return;
+    
+    setState(() {
+      _isTranscribing = true;
+    });
+    
+    try {
+      // Stop recording temporarily to get the current audio file
+      final currentPath = await _audioRecorder.stop();
+      
+      if (currentPath != null) {
+        final audioFile = File(currentPath);
+        if (await audioFile.exists()) {
+          _chunkCounter++;
+          
+          // Process this audio chunk
+          await _sendAudioChunkToAPI(audioFile);
+          
+          // Restart recording for the next chunk
+          final directory = await getTemporaryDirectory();
+          String fileName = 'streaming_${DateTime.now().millisecondsSinceEpoch}.wav';
+          final newFilePath = path.join(directory.path, fileName);
+          
+          final config = RecordConfig(
+            encoder: AudioEncoder.wav,
+            sampleRate: 16000,
+            numChannels: 1,
+          );
+          
+          await _audioRecorder.start(config, path: newFilePath);
+          _recordingPath = newFilePath;
+          _currentAudioFile = File(newFilePath);
+        }
+      }
+    } catch (e) {
+      debugPrint("Error in processing audio chunk: ${e.toString()}");
+    } finally {
+      setState(() {
+        _isTranscribing = false;
+      });
+    }
+  }
+  
+  // Send audio chunk to API for transcription
+  Future<void> _sendAudioChunkToAPI(File audioFile) async {
+    try {
+      final List<int> audioBytes = await audioFile.readAsBytes();
+      
+      // Prepare API request
+      final headers = {
+        "Authorization": "Bearer $_apiToken",
+        "Content-Type": "audio/wav",
+      };
+      
+      debugPrint("Sending audio chunk ${_chunkCounter} (${audioBytes.length} bytes) to API");
+      
+      // Make API request
+      final response = await http.post(
+        Uri.parse(_apiUrl),
+        headers: headers,
+        body: audioBytes,
+      ).timeout(const Duration(seconds: 15));
+      
+      if (response.statusCode == 200) {
+        final decodedResponse = jsonDecode(response.body);
+        
+        // Extract transcription from the response
+        String text = '';
+        if (decodedResponse is Map && decodedResponse.containsKey('text')) {
+          text = decodedResponse['text'];
+        } else if (decodedResponse is List && decodedResponse.isNotEmpty && decodedResponse[0] is Map) {
+          text = decodedResponse[0]['generated_text'] ?? '';
+        } else {
+          text = decodedResponse.toString();
+        }
+        
+        // Fix Arabic text encoding if needed
+        text = _fixArabicEncoding(text);
+        
+        // If the transcription is not empty and not just spaces, update it
+        if (text.trim().isNotEmpty) {
+          setState(() {
+            _liveTranscription = text;
+            _streamingStatus = 'Transcription updated';
+          });
+        }
+      } else if (response.statusCode == 503 || response.statusCode == 429) {
+        debugPrint("API temporarily unavailable (${response.statusCode})");
+        setState(() {
+          _streamingStatus = 'API busy, will retry...';
+        });
+      } else {
+        debugPrint("API error: ${response.statusCode}");
+        setState(() {
+          _streamingStatus = 'API Error: ${response.statusCode}';
+        });
+      }
+    } catch (e) {
+      debugPrint("Exception in sending audio chunk: ${e.toString()}");
+      setState(() {
+        _streamingStatus = 'Network error, will retry';
+      });
+    }
+  }
+  
+  // Stop streaming and cleanup
+  Future<void> _stopStreaming() async {
+    _streamingTimer?.cancel();
+    _streamingTimer = null;
+    
+    if (_isStreaming) {
+      try {
+        final path = await _audioRecorder.stop();
+        
+        setState(() {
+          _isStreaming = false;
+          _isRecording = false;
+          _recordingStatus = 'Transcription finished';
+          
+          // Save the final transcription
+          _transcription = _liveTranscription;
+        });
+      } catch (e) {
+        setState(() {
+          _isStreaming = false;
+          _isRecording = false;
+          _recordingStatus = 'Error when stopping: ${e.toString()}';
+        });
+      }
+    }
+  }
+
+  // Start recording function
+  Future<void> _startRecording() async {
+    try {
+      // Request permissions
+      final hasPermission = await _audioRecorder.hasPermission();
+      if (!hasPermission) {
+        setState(() {
+          _recordingStatus = 'Permission denied for recording';
+        });
+        return;
+      }
+
+      // Get the temp directory
+      final directory = await getTemporaryDirectory();
+      String fileName = 'hifz_recording_${DateTime.now().millisecondsSinceEpoch}.wav';
+      final filePath = path.join(directory.path, fileName);
+
+      // Configure recording for WAV format
+      final config = RecordConfig(
+        encoder: AudioEncoder.wav,
+        sampleRate: 44100,
+        numChannels: 2, // Stereo recording
+      );
+
+      // Start recording
+      await _audioRecorder.start(config, path: filePath);
+
+      setState(() {
+        _isRecording = true;
+        _recordingStatus = 'Recording in progress...';
+        _recordingPath = filePath;
+      });
+    } catch (e) {
+      setState(() {
+        _recordingStatus = 'Recording error: ${e.toString()}';
+      });
+    }
+  }
+
+  // Stop recording function
+  Future<void> _stopRecording() async {
+    try {
+      final path = await _audioRecorder.stop();
+      
+      if (path != null) {
+        setState(() {
+          _isRecording = false;
+          _recordingStatus = 'Recording saved';
+          _recordingPath = path;
+        });
+      } else {
+        setState(() {
+          _isRecording = false;
+          _recordingStatus = 'Failed to save recording';
+        });
+      }
+    } catch (e) {
+      setState(() {
+        _isRecording = false;
+        _recordingStatus = 'Error when stopping: ${e.toString()}';
+      });
+    }
+  }
+
+  // Play recording function
+  Future<void> _playRecording() async {
+    if (_recordingPath != null) {
+      try {
+        await _audioPlayer.setFilePath(_recordingPath!);
+        _audioPlayer.play();
+        setState(() {
+          _isPlaying = true;
+          _recordingStatus = 'Playing recording...';
+        });
+
+        // Listen for playback completion
+        _audioPlayer.playerStateStream.listen((state) {
+          if (state.processingState == ProcessingState.completed) {
+            setState(() {
+              _isPlaying = false;
+              _recordingStatus = 'Ready to record';
+            });
+          }
+        });
+      } catch (e) {
+        setState(() {
+          _recordingStatus = 'Error playing: ${e.toString()}';
+        });
+      }
+    } else {
+      setState(() {
+        _recordingStatus = 'No recording to play';
+      });
+    }
+  }
+
+  // Stop playback function
+  Future<void> _stopPlayback() async {
+    await _audioPlayer.stop();
+    setState(() {
+      _isPlaying = false;
+      _recordingStatus = 'Ready to record';
+    });
+  }
+  
+  // Send audio to Hugging Face API
+  Future<void> _processAudioWithAPI() async {
+    if (_recordingPath == null) {
+      setState(() {
+        _apiResult = "No recording available to process";
+      });
+      return;
+    }
+    
+    setState(() {
+      _isProcessing = true;
+      _apiResult = "Processing audio...";
+      _transcription = null;
+    });
+    
+    // Read file as bytes - do this outside the retry loop to read the file only once
+    final File audioFile = File(_recordingPath!);
+    final List<int> audioBytes;
+    
+    try {
+      audioBytes = await audioFile.readAsBytes();
+    } catch (e) {
+      setState(() {
+        _isProcessing = false;
+        _apiResult = "Error reading audio file: ${e.toString()}";
+      });
+      return;
+    }
+    
+    // Prepare API request
+    final headers = {
+      "Authorization": "Bearer $_apiToken",
+      "Content-Type": "audio/wav",  // Specify correct content type for audio
+    };
+    
+    // Retry configuration
+    const int maxRetries = 4;
+    const int initialDelayMs = 1000; // Start with 1 second delay
+    int currentRetry = 0;
+    bool success = false;
+    
+    while (currentRetry < maxRetries && !success) {
+      try {
+        if (currentRetry > 0) {
+          // Update status on retry
+          setState(() {
+            _apiResult = "Retry attempt ${currentRetry}/${maxRetries-1}...";
+          });
+          
+          // Exponential backoff - wait longer between each retry
+          final delayMs = initialDelayMs * (1 << (currentRetry - 1)); // 1s, 2s, 4s, 8s
+          await Future.delayed(Duration(milliseconds: delayMs));
+        }
+        
+        debugPrint("API call attempt ${currentRetry + 1}/${maxRetries}: Sending ${audioBytes.length} bytes to Tarteel AI Whisper Quran model");
+        
+        // Make API request
+        final response = await http.post(
+          Uri.parse(_apiUrl),
+          headers: headers,
+          body: audioBytes,
+        );
+        
+        debugPrint("API Response Status: ${response.statusCode}");
+        debugPrint("API Response Body: ${response.body.substring(0, min(100, response.body.length))}...");
+        
+        if (response.statusCode == 200) {
+          // Process successful response
+          final decodedResponse = jsonDecode(response.body);
+          
+          // Extract transcription from the response
+          String text = '';
+          if (decodedResponse is Map && decodedResponse.containsKey('text')) {
+            text = decodedResponse['text'];
+          } else if (decodedResponse is List && decodedResponse.isNotEmpty && decodedResponse[0] is Map) {
+            text = decodedResponse[0]['generated_text'] ?? '';
+          } else {
+            text = decodedResponse.toString();
+          }
+          
+          // Fix Arabic text encoding if needed
+          text = _fixArabicEncoding(text);
+          
+          setState(() {
+            _isProcessing = false;
+            _transcription = text;
+            _apiResult = "Successfully processed audio with Tarteel AI Quran model";
+          });
+          
+          success = true; // Mark as successful to exit the retry loop
+          break;
+        } else if (response.statusCode == 503 || response.statusCode == 429) {
+          // 503 Service Unavailable - The model is likely still loading (cold start)
+          // 429 Too Many Requests - Rate limiting
+          debugPrint("${response.statusCode} received - Model is likely still loading, will retry");
+          
+          // Will retry - don't mark as success
+          currentRetry++;
+        } else {
+          // Other error types that won't benefit from retry
+          setState(() {
+            _isProcessing = false;
+            _apiResult = "API Error ${response.statusCode}\n${response.reasonPhrase}\n\nPlease check your API token or try another model.";
+          });
+          
+          if (response.statusCode == 400) {
+            debugPrint("400 Bad Request - This might indicate an issue with the audio format or model compatibility");
+          } else if (response.statusCode == 401) {
+            debugPrint("401 Unauthorized - Check if your API token is valid");
+          }
+          
+          break; // Exit retry loop for errors that won't be fixed by retrying
+        }
+      } catch (e) {
+        // Network or other errors might benefit from retry
+        debugPrint("Exception during API call: ${e.toString()}, will retry");
+        currentRetry++;
+        
+        // If we've exhausted all retries, show error message
+        if (currentRetry >= maxRetries) {
+          setState(() {
+            _isProcessing = false;
+            _apiResult = "Error processing audio after $maxRetries attempts: ${e.toString()}";
+          });
+        }
+      }
+    }
+    
+    // If we've used all retries and still didn't succeed
+    if (!success && currentRetry >= maxRetries) {
+      setState(() {
+        _isProcessing = false;
+        _apiResult = "API failed to respond after $maxRetries attempts. The model may still be loading. Please try again in a minute.";
+      });
+    }
+  }
+  
+  // Helper method to fix Arabic encoding issues with comprehensive replacements
+  String _fixArabicEncoding(String text) {
+    // If the text contains encoding issues
+    if (text.contains('Ù') || text.contains('Ø') || text.contains('Ú')) {
+      try {
+        // Try to decode as UTF-8 first
+        final decoded = utf8.decode(text.codeUnits);
+        return decoded;
+      } catch (e) {
+        // If UTF-8 decoding fails, apply comprehensive replacements
+        return text
+            // Arabic letters
+            .replaceAll('Ø§', 'ا') // Alif
+            .replaceAll('Ø£', 'أ') // Alif with hamza above
+            .replaceAll('Ø¢', 'آ') // Alif madda
+            .replaceAll('Ø¥', 'إ') // Alif with hamza below
+            .replaceAll('Ø¨', 'ب') // Ba
+            .replaceAll('Øª', 'ت') // Ta
+            .replaceAll('Ø«', 'ث') // Tha
+            .replaceAll('Ø¬', 'ج') // Jim
+            .replaceAll('Ø­', 'ح') // Ha
+            .replaceAll('Ø®', 'خ') // Kha
+            .replaceAll('Ø¯', 'د') // Dal
+            .replaceAll('Ø°', 'ذ') // Thal
+            .replaceAll('Ø±', 'ر') // Ra
+            .replaceAll('Ø²', 'ز') // Zay
+            .replaceAll('Ø³', 'س') // Sin
+            .replaceAll('Ø´', 'ش') // Shin
+            .replaceAll('Ø¹', 'ع') // Ain
+            .replaceAll('Ø´', 'ش') // Shin
+            .replaceAll('Øµ', 'ص') // Sad
+            .replaceAll('Ø¶', 'ض') // Dad
+            .replaceAll('Ø·', 'ط') // Ta (emphatic)
+            .replaceAll('Ø¸', 'ظ') // Zah
+            .replaceAll('Ø¹', 'ع') // Ain
+            .replaceAll('Øº', 'غ') // Ghayn
+            .replaceAll('Ù', 'ف') // Fa
+            .replaceAll('Ù', 'ق') // Qaf
+            .replaceAll('Ù', 'ك') // Kaf
+            .replaceAll('Ù', 'ل') // Lam
+            .replaceAll('Ù', 'م') // Mim
+            .replaceAll('Ù', 'ن') // Nun
+            .replaceAll('Ù', 'ه') // Ha
+            .replaceAll('Ù', 'و') // Waw
+            .replaceAll('Ù', 'ي') // Ya
+            
+            // Diacritics
+            .replaceAll('Ù', 'َ') // Fatha
+            .replaceAll('Ù', 'ُ') // Damma
+            .replaceAll('Ù', 'ِ') // Kasra
+            .replaceAll('Ù', 'ً') // Tanwin Fath (double fatha)
+            .replaceAll('Ù', 'ٌ') // Tanwin Damm (double damma)
+            .replaceAll('Ù', 'ٍ') // Tanwin Kasr (double kasra)
+            .replaceAll('Ù', 'ّ') // Shadda
+            .replaceAll('Ù', 'ْ') // Sukun
+            
+            // Additional Arabic-specific characters
+            .replaceAll('Ø©', 'ة') // Ta marbuta
+            .replaceAll('Ø¡', 'ء') // Hamza
+            .replaceAll('Ù', 'ئ') // Ya with hamza
+            .replaceAll('Ù', 'ؤ') // Waw with hamza
+            
+            // Punctuation and numerals
+            .replaceAll('Ø', '٠') // Arabic zero
+            .replaceAll('Ù', '١') // Arabic one
+            .replaceAll('Ù', '٢') // Arabic two
+            .replaceAll('Ù', '٣') // Arabic three
+            .replaceAll('Ù', '٤') // Arabic four
+            .replaceAll('Ù', '٥') // Arabic five
+            .replaceAll('Ù', '٦') // Arabic six
+            .replaceAll('Ù', '٧') // Arabic seven
+            .replaceAll('Ù', '٨') // Arabic eight
+            .replaceAll('Ù', '٩') // Arabic nine
+            
+            // Special cases
+            .replaceAll('Ù Ù', 'لا') // Lam-alif ligature
+            .replaceAll('Ù Ø£', 'لأ') // Lam-alif with hamza above
+            .replaceAll('Ù Ø¥', 'لإ') // Lam-alif with hamza below
+            
+            // Common Quranic symbols
+            .replaceAll('Û', '۞') // Sajdah
+            .replaceAll('Û', '۝') // Ruku/Section
+            
+            // Fix spaces and double encoding issues
+            .replaceAll('%20', ' ') // Space
+            .replaceAll('  ', ' '); // Double space to single space
+      }
+    }
+    return text;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -65,21 +624,38 @@ class HifzPage extends StatefulWidget {
               
               const SizedBox(height: 30),
               
-              // Recording controls
+              // Recording controls - changed for streaming support
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  // Record button
+                  // Realtime Streaming Button
                   ElevatedButton(
-                    onPressed: _isPlaying ? null : (_isRecording ? _stopRecording : _startRecording),
+                    onPressed: _isPlaying ? null : (_isStreaming ? _stopStreaming : _startStreaming),
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: _isRecording ? Colors.red : const Color(0xFF00A896),
+                      backgroundColor: _isStreaming ? Colors.red : const Color(0xFF00A896),
                       foregroundColor: Colors.white,
                       padding: const EdgeInsets.all(16),
                       shape: const CircleBorder(),
                     ),
                     child: Icon(
-                      _isRecording ? Icons.stop : Icons.mic,
+                      _isStreaming ? Icons.stop : Icons.mic_rounded,
+                      size: 36,
+                    ),
+                  ),
+                  
+                  const SizedBox(width: 20),
+                  
+                  // Standard recording button
+                  ElevatedButton(
+                    onPressed: _isPlaying || _isStreaming ? null : (_isRecording ? _stopRecording : _startRecording),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: _isRecording && !_isStreaming ? Colors.red : const Color(0xFF1F8A70),
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.all(16),
+                      shape: const CircleBorder(),
+                    ),
+                    child: Icon(
+                      _isRecording && !_isStreaming ? Icons.stop : Icons.mic,
                       size: 36,
                     ),
                   ),
@@ -88,7 +664,7 @@ class HifzPage extends StatefulWidget {
                   
                   // Play button (only enabled if recording exists)
                   ElevatedButton(
-                    onPressed: (_recordingPath != null && !_isRecording) 
+                    onPressed: (_recordingPath != null && !_isRecording && !_isStreaming) 
                         ? (_isPlaying ? _stopPlayback : _playRecording)
                         : null,
                     style: ElevatedButton.styleFrom(
@@ -105,7 +681,86 @@ class HifzPage extends StatefulWidget {
                 ],
               ),
               
-              if (_recordingPath != null) ...[
+              const SizedBox(height: 20),
+              
+              // Display instructions for each mode
+              Text(
+                _isStreaming 
+                    ? 'Real-time transcription mode - recite and see results instantly' 
+                    : 'Choose between real-time transcription (left) or single recording (middle)',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 14,
+                  fontStyle: FontStyle.italic,
+                  color: Theme.of(context).colorScheme.onBackground.withOpacity(0.6),
+                ),
+              ),
+              
+              // Live transcription display
+              if (_isStreaming) ...[
+                const SizedBox(height: 30),
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.blue[50],
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: Colors.blue.shade300, width: 1),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          const Text(
+                            'Live Transcription:',
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 18,
+                              color: Color(0xFF1565C0),
+                            ),
+                          ),
+                          const Spacer(),
+                          if (_isTranscribing)
+                            const SizedBox(
+                              width: 15,
+                              height: 15,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: Color(0xFF1565C0),
+                              ),
+                            ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        _liveTranscription,
+                        style: const TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.w500,
+                          color: Colors.black,
+                          fontFamily: 'Scheherazade',
+                        ),
+                        textDirection: TextDirection.rtl,
+                      ),
+                      if (_streamingStatus.isNotEmpty)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 8.0),
+                          child: Text(
+                            _streamingStatus,
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontStyle: FontStyle.italic,
+                              color: Theme.of(context).colorScheme.onBackground.withOpacity(0.6),
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+              ],
+              
+              if (_recordingPath != null && !_isStreaming) ...[
                 const SizedBox(height: 30),
                 Text(
                   'Recording saved at:\n${_recordingPath!.split('/').last}',
@@ -161,12 +816,12 @@ class HifzPage extends StatefulWidget {
                         Text(
                           _transcription!,
                           style: const TextStyle(
-                            fontSize: 18, // Slightly larger for better readability
+                            fontSize: 18,
                             fontWeight: FontWeight.w500,
-                            color: Colors.black, // Set text color to black
-                            fontFamily: 'Scheherazade', // Use Arabic font if available
+                            color: Colors.black,
+                            fontFamily: 'Scheherazade',
                           ),
-                          textDirection: TextDirection.rtl, // Right to left for Arabic
+                          textDirection: TextDirection.rtl,
                         ),
                       ],
                     ),
