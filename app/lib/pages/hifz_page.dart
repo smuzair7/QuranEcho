@@ -1,6 +1,5 @@
 import 'dart:io';
 import 'dart:convert'; 
-import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:record/record.dart';
 import 'package:just_audio/just_audio.dart';
@@ -27,214 +26,17 @@ class _HifzPageState extends State<HifzPage> {
   
   // API variables
   static const String _apiToken = "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";
+  // Update to use the tarteel-ai/whisper-base-ar-quran model
   static const String _apiUrl = "https://api-inference.huggingface.co/models/tarteel-ai/whisper-base-ar-quran";
   bool _isProcessing = false;
   String? _apiResult;
   String? _transcription;
-  
-  // Real-time streaming variables
-  bool _isStreaming = false;
-  Timer? _streamingTimer;
-  StreamController<List<int>>? _audioStreamController;
-  String _streamingStatus = '';
-  final int _streamIntervalMs = 3000; // Send audio chunks every 3 seconds
-  DateTime? _recordingStartTime;
-  File? _currentAudioFile;
-  bool _isTranscribing = false;
-  String _liveTranscription = '';
-  int _chunkCounter = 0;
 
   @override
   void dispose() {
-    _stopStreaming();
     _audioRecorder.dispose();
     _audioPlayer.dispose();
-    _audioStreamController?.close();
-    _streamingTimer?.cancel();
     super.dispose();
-  }
-
-  // Start real-time streaming and transcription
-  Future<void> _startStreaming() async {
-    try {
-      // Request permissions
-      final hasPermission = await _audioRecorder.hasPermission();
-      if (!hasPermission) {
-        setState(() {
-          _recordingStatus = 'Permission denied for recording';
-        });
-        return;
-      }
-      
-      // Create a temporary directory for storing audio chunks
-      final directory = await getTemporaryDirectory();
-      String fileName = 'streaming_${DateTime.now().millisecondsSinceEpoch}.wav';
-      final filePath = path.join(directory.path, fileName);
-      _currentAudioFile = File(filePath);
-      
-      // Configure recording for WAV format
-      final config = RecordConfig(
-        encoder: AudioEncoder.wav,
-        sampleRate: 16000, // 16kHz for better speech recognition
-        numChannels: 1, // Mono recording for API efficiency
-      );
-      
-      // Start recording
-      await _audioRecorder.start(config, path: filePath);
-      _recordingStartTime = DateTime.now();
-      
-      setState(() {
-        _isStreaming = true;
-        _isRecording = true;
-        _recordingStatus = 'Real-time transcription active...';
-        _recordingPath = filePath;
-        _liveTranscription = 'Listening...';
-      });
-      
-      // Set up timer to send audio chunks periodically
-      _streamingTimer = Timer.periodic(Duration(milliseconds: _streamIntervalMs), (timer) {
-        _processAudioChunk();
-      });
-      
-    } catch (e) {
-      setState(() {
-        _recordingStatus = 'Streaming error: ${e.toString()}';
-      });
-    }
-  }
-  
-  // Process audio chunks for real-time transcription
-  Future<void> _processAudioChunk() async {
-    if (!_isStreaming || _isTranscribing) return;
-    
-    setState(() {
-      _isTranscribing = true;
-    });
-    
-    try {
-      // Stop recording temporarily to get the current audio file
-      final currentPath = await _audioRecorder.stop();
-      
-      if (currentPath != null) {
-        final audioFile = File(currentPath);
-        if (await audioFile.exists()) {
-          _chunkCounter++;
-          
-          // Process this audio chunk
-          await _sendAudioChunkToAPI(audioFile);
-          
-          // Restart recording for the next chunk
-          final directory = await getTemporaryDirectory();
-          String fileName = 'streaming_${DateTime.now().millisecondsSinceEpoch}.wav';
-          final newFilePath = path.join(directory.path, fileName);
-          
-          final config = RecordConfig(
-            encoder: AudioEncoder.wav,
-            sampleRate: 16000,
-            numChannels: 1,
-          );
-          
-          await _audioRecorder.start(config, path: newFilePath);
-          _recordingPath = newFilePath;
-          _currentAudioFile = File(newFilePath);
-        }
-      }
-    } catch (e) {
-      debugPrint("Error in processing audio chunk: ${e.toString()}");
-    } finally {
-      setState(() {
-        _isTranscribing = false;
-      });
-    }
-  }
-  
-  // Send audio chunk to API for transcription
-  Future<void> _sendAudioChunkToAPI(File audioFile) async {
-    try {
-      final List<int> audioBytes = await audioFile.readAsBytes();
-      
-      // Prepare API request
-      final headers = {
-        "Authorization": "Bearer $_apiToken",
-        "Content-Type": "audio/wav",
-      };
-      
-      debugPrint("Sending audio chunk ${_chunkCounter} (${audioBytes.length} bytes) to API");
-      
-      // Make API request
-      final response = await http.post(
-        Uri.parse(_apiUrl),
-        headers: headers,
-        body: audioBytes,
-      ).timeout(const Duration(seconds: 15));
-      
-      if (response.statusCode == 200) {
-        final decodedResponse = jsonDecode(response.body);
-        
-        // Extract transcription from the response
-        String text = '';
-        if (decodedResponse is Map && decodedResponse.containsKey('text')) {
-          text = decodedResponse['text'];
-        } else if (decodedResponse is List && decodedResponse.isNotEmpty && decodedResponse[0] is Map) {
-          text = decodedResponse[0]['generated_text'] ?? '';
-        } else {
-          text = decodedResponse.toString();
-        }
-        
-        // Fix Arabic text encoding if needed
-        text = _fixArabicEncoding(text);
-        
-        // If the transcription is not empty and not just spaces, update it
-        if (text.trim().isNotEmpty) {
-          setState(() {
-            _liveTranscription = text;
-            _streamingStatus = 'Transcription updated';
-          });
-        }
-      } else if (response.statusCode == 503 || response.statusCode == 429) {
-        debugPrint("API temporarily unavailable (${response.statusCode})");
-        setState(() {
-          _streamingStatus = 'API busy, will retry...';
-        });
-      } else {
-        debugPrint("API error: ${response.statusCode}");
-        setState(() {
-          _streamingStatus = 'API Error: ${response.statusCode}';
-        });
-      }
-    } catch (e) {
-      debugPrint("Exception in sending audio chunk: ${e.toString()}");
-      setState(() {
-        _streamingStatus = 'Network error, will retry';
-      });
-    }
-  }
-  
-  // Stop streaming and cleanup
-  Future<void> _stopStreaming() async {
-    _streamingTimer?.cancel();
-    _streamingTimer = null;
-    
-    if (_isStreaming) {
-      try {
-        final path = await _audioRecorder.stop();
-        
-        setState(() {
-          _isStreaming = false;
-          _isRecording = false;
-          _recordingStatus = 'Transcription finished';
-          
-          // Save the final transcription
-          _transcription = _liveTranscription;
-        });
-      } catch (e) {
-        setState(() {
-          _isStreaming = false;
-          _isRecording = false;
-          _recordingStatus = 'Error when stopping: ${e.toString()}';
-        });
-      }
-    }
   }
 
   // Start recording function
@@ -624,38 +426,21 @@ class _HifzPageState extends State<HifzPage> {
               
               const SizedBox(height: 30),
               
-              // Recording controls - changed for streaming support
+              // Recording controls
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  // Realtime Streaming Button
+                  // Record button
                   ElevatedButton(
-                    onPressed: _isPlaying ? null : (_isStreaming ? _stopStreaming : _startStreaming),
+                    onPressed: _isPlaying ? null : (_isRecording ? _stopRecording : _startRecording),
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: _isStreaming ? Colors.red : const Color(0xFF00A896),
+                      backgroundColor: _isRecording ? Colors.red : const Color(0xFF00A896),
                       foregroundColor: Colors.white,
                       padding: const EdgeInsets.all(16),
                       shape: const CircleBorder(),
                     ),
                     child: Icon(
-                      _isStreaming ? Icons.stop : Icons.mic_rounded,
-                      size: 36,
-                    ),
-                  ),
-                  
-                  const SizedBox(width: 20),
-                  
-                  // Standard recording button
-                  ElevatedButton(
-                    onPressed: _isPlaying || _isStreaming ? null : (_isRecording ? _stopRecording : _startRecording),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: _isRecording && !_isStreaming ? Colors.red : const Color(0xFF1F8A70),
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.all(16),
-                      shape: const CircleBorder(),
-                    ),
-                    child: Icon(
-                      _isRecording && !_isStreaming ? Icons.stop : Icons.mic,
+                      _isRecording ? Icons.stop : Icons.mic,
                       size: 36,
                     ),
                   ),
@@ -664,7 +449,7 @@ class _HifzPageState extends State<HifzPage> {
                   
                   // Play button (only enabled if recording exists)
                   ElevatedButton(
-                    onPressed: (_recordingPath != null && !_isRecording && !_isStreaming) 
+                    onPressed: (_recordingPath != null && !_isRecording) 
                         ? (_isPlaying ? _stopPlayback : _playRecording)
                         : null,
                     style: ElevatedButton.styleFrom(
@@ -681,86 +466,7 @@ class _HifzPageState extends State<HifzPage> {
                 ],
               ),
               
-              const SizedBox(height: 20),
-              
-              // Display instructions for each mode
-              Text(
-                _isStreaming 
-                    ? 'Real-time transcription mode - recite and see results instantly' 
-                    : 'Choose between real-time transcription (left) or single recording (middle)',
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: 14,
-                  fontStyle: FontStyle.italic,
-                  color: Theme.of(context).colorScheme.onBackground.withOpacity(0.6),
-                ),
-              ),
-              
-              // Live transcription display
-              if (_isStreaming) ...[
-                const SizedBox(height: 30),
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: Colors.blue[50],
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: Colors.blue.shade300, width: 1),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          const Text(
-                            'Live Transcription:',
-                            style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 18,
-                              color: Color(0xFF1565C0),
-                            ),
-                          ),
-                          const Spacer(),
-                          if (_isTranscribing)
-                            const SizedBox(
-                              width: 15,
-                              height: 15,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                color: Color(0xFF1565C0),
-                              ),
-                            ),
-                        ],
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        _liveTranscription,
-                        style: const TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.w500,
-                          color: Colors.black,
-                          fontFamily: 'Scheherazade',
-                        ),
-                        textDirection: TextDirection.rtl,
-                      ),
-                      if (_streamingStatus.isNotEmpty)
-                        Padding(
-                          padding: const EdgeInsets.only(top: 8.0),
-                          child: Text(
-                            _streamingStatus,
-                            style: TextStyle(
-                              fontSize: 12,
-                              fontStyle: FontStyle.italic,
-                              color: Theme.of(context).colorScheme.onBackground.withOpacity(0.6),
-                            ),
-                          ),
-                        ),
-                    ],
-                  ),
-                ),
-              ],
-              
-              if (_recordingPath != null && !_isStreaming) ...[
+              if (_recordingPath != null) ...[
                 const SizedBox(height: 30),
                 Text(
                   'Recording saved at:\n${_recordingPath!.split('/').last}',
@@ -816,12 +522,12 @@ class _HifzPageState extends State<HifzPage> {
                         Text(
                           _transcription!,
                           style: const TextStyle(
-                            fontSize: 18,
+                            fontSize: 18, // Slightly larger for better readability
                             fontWeight: FontWeight.w500,
-                            color: Colors.black,
-                            fontFamily: 'Scheherazade',
+                            color: Colors.black, // Set text color to black
+                            fontFamily: 'Scheherazade', // Use Arabic font if available
                           ),
-                          textDirection: TextDirection.rtl,
+                          textDirection: TextDirection.rtl, // Right to left for Arabic
                         ),
                       ],
                     ),
