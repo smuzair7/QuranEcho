@@ -180,7 +180,7 @@ class HomePage extends StatelessWidget {
                                   description: 'Memorize the Quran',
                                   icon: Icons.auto_stories,
                                   color: const Color(0xFF00A896),
-                                  onTap: () => Navigator.pushNamed(context, '/hifz'),
+                                  onTap: () => Navigator.pushNamed(context, '/hifz_select'),
                                 ),
                               ),
                             ],

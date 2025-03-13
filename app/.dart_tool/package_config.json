@@ -140,6 +140,12 @@
       "languageVersion": "3.4"
     },
     {
+      "name": "csv",
+      "rootUri": "file:///C:/Users/hafmo/AppData/Local/Pub/Cache/hosted/pub.dev/csv-6.0.0",
+      "packageUri": "lib/",
+      "languageVersion": "2.12"
+    },
+    {
       "name": "cupertino_icons",
       "rootUri": "file:///C:/Users/hafmo/AppData/Local/Pub/Cache/hosted/pub.dev/cupertino_icons-1.0.8",
       "packageUri": "lib/",
@@ -470,6 +476,12 @@
       "languageVersion": "3.6"
     },
     {
+      "name": "queue",
+      "rootUri": "file:///C:/Users/hafmo/AppData/Local/Pub/Cache/hosted/pub.dev/queue-3.4.0",
+      "packageUri": "lib/",
+      "languageVersion": "2.12"
+    },
+    {
       "name": "record",
       "rootUri": "file:///C:/Users/hafmo/AppData/Local/Pub/Cache/hosted/pub.dev/record-5.2.1",
       "packageUri": "lib/",
@@ -734,7 +746,7 @@
       "languageVersion": "3.3"
     }
   ],
-  "generated": "2025-03-11T12:30:48.370605Z",
+  "generated": "2025-03-13T22:43:39.146018Z",
   "generator": "pub",
   "generatorVersion": "3.7.0",
   "flutterRoot": "file:///C:/flutter/src/flutter",

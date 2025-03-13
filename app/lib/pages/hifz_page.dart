@@ -7,6 +7,8 @@ import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as path;
 import 'package:http/http.dart' as http;
 import 'dart:math' show min;
+import 'dart:async';
+import 'package:queue/queue.dart';
 
 class HifzPage extends StatefulWidget {
   const HifzPage({super.key});
@@ -16,6 +18,12 @@ class HifzPage extends StatefulWidget {
 }
 
 class _HifzPageState extends State<HifzPage> {
+  // Add surah info variables
+  int? surahNumber;
+  String? surahName;
+  String? arabicName;
+  int? ayahCount;
+
   // Audio recording variables
   final _audioRecorder = AudioRecorder();
   final _audioPlayer = AudioPlayer();
@@ -26,11 +34,13 @@ class _HifzPageState extends State<HifzPage> {
   
   // API variables
   static const String _apiToken = "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";
-  // Update to use the tarteel-ai/whisper-base-ar-quran model
   static const String _apiUrl = "https://api-inference.huggingface.co/models/tarteel-ai/whisper-base-ar-quran";
   bool _isProcessing = false;
   String? _apiResult;
-  String? _transcription;
+  List<String> _transcriptions = [];
+
+  // Queue for API requests
+  final Queue _apiQueue = Queue();
 
   @override
   void dispose() {
@@ -39,10 +49,26 @@ class _HifzPageState extends State<HifzPage> {
     super.dispose();
   }
 
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    
+    // Get the arguments passed from the select surah page
+    final args = ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
+    
+    if (args != null) {
+      setState(() {
+        surahNumber = args['surahNumber'];
+        surahName = args['surahName'];
+        arabicName = args['arabicName'];
+        ayahCount = args['ayahCount'];
+      });
+    }
+  }
+
   // Start recording function
   Future<void> _startRecording() async {
     try {
-      // Request permissions
       final hasPermission = await _audioRecorder.hasPermission();
       if (!hasPermission) {
         setState(() {
@@ -51,19 +77,16 @@ class _HifzPageState extends State<HifzPage> {
         return;
       }
 
-      // Get the temp directory
       final directory = await getTemporaryDirectory();
       String fileName = 'hifz_recording_${DateTime.now().millisecondsSinceEpoch}.wav';
       final filePath = path.join(directory.path, fileName);
 
-      // Configure recording for WAV format
       final config = RecordConfig(
         encoder: AudioEncoder.wav,
         sampleRate: 44100,
-        numChannels: 2, // Stereo recording
+        numChannels: 2,
       );
 
-      // Start recording
       await _audioRecorder.start(config, path: filePath);
 
       setState(() {
@@ -89,6 +112,7 @@ class _HifzPageState extends State<HifzPage> {
           _recordingStatus = 'Recording saved';
           _recordingPath = path;
         });
+        _enqueueApiRequest(path);
       } else {
         setState(() {
           _isRecording = false;
@@ -103,66 +127,21 @@ class _HifzPageState extends State<HifzPage> {
     }
   }
 
-  // Play recording function
-  Future<void> _playRecording() async {
-    if (_recordingPath != null) {
-      try {
-        await _audioPlayer.setFilePath(_recordingPath!);
-        _audioPlayer.play();
-        setState(() {
-          _isPlaying = true;
-          _recordingStatus = 'Playing recording...';
-        });
-
-        // Listen for playback completion
-        _audioPlayer.playerStateStream.listen((state) {
-          if (state.processingState == ProcessingState.completed) {
-            setState(() {
-              _isPlaying = false;
-              _recordingStatus = 'Ready to record';
-            });
-          }
-        });
-      } catch (e) {
-        setState(() {
-          _recordingStatus = 'Error playing: ${e.toString()}';
-        });
-      }
-    } else {
-      setState(() {
-        _recordingStatus = 'No recording to play';
-      });
-    }
+  // Enqueue API request
+  void _enqueueApiRequest(String path) {
+    _apiQueue.add(() => _processAudioWithAPI(path));
   }
 
-  // Stop playback function
-  Future<void> _stopPlayback() async {
-    await _audioPlayer.stop();
-    setState(() {
-      _isPlaying = false;
-      _recordingStatus = 'Ready to record';
-    });
-  }
-  
-  // Send audio to Hugging Face API
-  Future<void> _processAudioWithAPI() async {
-    if (_recordingPath == null) {
-      setState(() {
-        _apiResult = "No recording available to process";
-      });
-      return;
-    }
-    
+  // Process audio with API
+  Future<void> _processAudioWithAPI(String path) async {
     setState(() {
       _isProcessing = true;
       _apiResult = "Processing audio...";
-      _transcription = null;
     });
-    
-    // Read file as bytes - do this outside the retry loop to read the file only once
-    final File audioFile = File(_recordingPath!);
+
+    final File audioFile = File(path);
     final List<int> audioBytes;
-    
+
     try {
       audioBytes = await audioFile.readAsBytes();
     } catch (e) {
@@ -172,49 +151,35 @@ class _HifzPageState extends State<HifzPage> {
       });
       return;
     }
-    
-    // Prepare API request
+
     final headers = {
       "Authorization": "Bearer $_apiToken",
-      "Content-Type": "audio/wav",  // Specify correct content type for audio
+      "Content-Type": "audio/wav",
     };
-    
-    // Retry configuration
+
     const int maxRetries = 4;
-    const int initialDelayMs = 1000; // Start with 1 second delay
+    const int initialDelayMs = 1000;
     int currentRetry = 0;
     bool success = false;
-    
+
     while (currentRetry < maxRetries && !success) {
       try {
         if (currentRetry > 0) {
-          // Update status on retry
           setState(() {
             _apiResult = "Retry attempt ${currentRetry}/${maxRetries-1}...";
           });
-          
-          // Exponential backoff - wait longer between each retry
-          final delayMs = initialDelayMs * (1 << (currentRetry - 1)); // 1s, 2s, 4s, 8s
+          final delayMs = initialDelayMs * (1 << (currentRetry - 1));
           await Future.delayed(Duration(milliseconds: delayMs));
         }
-        
-        debugPrint("API call attempt ${currentRetry + 1}/${maxRetries}: Sending ${audioBytes.length} bytes to Tarteel AI Whisper Quran model");
-        
-        // Make API request
+
         final response = await http.post(
           Uri.parse(_apiUrl),
           headers: headers,
           body: audioBytes,
         );
-        
-        debugPrint("API Response Status: ${response.statusCode}");
-        debugPrint("API Response Body: ${response.body.substring(0, min(100, response.body.length))}...");
-        
+
         if (response.statusCode == 200) {
-          // Process successful response
           final decodedResponse = jsonDecode(response.body);
-          
-          // Extract transcription from the response
           String text = '';
           if (decodedResponse is Map && decodedResponse.containsKey('text')) {
             text = decodedResponse['text'];
@@ -223,46 +188,28 @@ class _HifzPageState extends State<HifzPage> {
           } else {
             text = decodedResponse.toString();
           }
-          
-          // Fix Arabic text encoding if needed
+
           text = _fixArabicEncoding(text);
-          
+
           setState(() {
             _isProcessing = false;
-            _transcription = text;
+            _transcriptions.add(text);
             _apiResult = "Successfully processed audio with Tarteel AI Quran model";
           });
-          
-          success = true; // Mark as successful to exit the retry loop
+
+          success = true;
           break;
         } else if (response.statusCode == 503 || response.statusCode == 429) {
-          // 503 Service Unavailable - The model is likely still loading (cold start)
-          // 429 Too Many Requests - Rate limiting
-          debugPrint("${response.statusCode} received - Model is likely still loading, will retry");
-          
-          // Will retry - don't mark as success
           currentRetry++;
         } else {
-          // Other error types that won't benefit from retry
           setState(() {
             _isProcessing = false;
             _apiResult = "API Error ${response.statusCode}\n${response.reasonPhrase}\n\nPlease check your API token or try another model.";
           });
-          
-          if (response.statusCode == 400) {
-            debugPrint("400 Bad Request - This might indicate an issue with the audio format or model compatibility");
-          } else if (response.statusCode == 401) {
-            debugPrint("401 Unauthorized - Check if your API token is valid");
-          }
-          
-          break; // Exit retry loop for errors that won't be fixed by retrying
+          break;
         }
       } catch (e) {
-        // Network or other errors might benefit from retry
-        debugPrint("Exception during API call: ${e.toString()}, will retry");
         currentRetry++;
-        
-        // If we've exhausted all retries, show error message
         if (currentRetry >= maxRetries) {
           setState(() {
             _isProcessing = false;
@@ -271,8 +218,7 @@ class _HifzPageState extends State<HifzPage> {
         }
       }
     }
-    
-    // If we've used all retries and still didn't succeed
+
     if (!success && currentRetry >= maxRetries) {
       setState(() {
         _isProcessing = false;
@@ -280,103 +226,112 @@ class _HifzPageState extends State<HifzPage> {
       });
     }
   }
-  
-  // Helper method to fix Arabic encoding issues with comprehensive replacements
+
+  // Helper method to fix Arabic encoding issues
   String _fixArabicEncoding(String text) {
-    // If the text contains encoding issues
     if (text.contains('Ù') || text.contains('Ø') || text.contains('Ú')) {
       try {
-        // Try to decode as UTF-8 first
         final decoded = utf8.decode(text.codeUnits);
         return decoded;
       } catch (e) {
-        // If UTF-8 decoding fails, apply comprehensive replacements
         return text
-            // Arabic letters
-            .replaceAll('Ø§', 'ا') // Alif
-            .replaceAll('Ø£', 'أ') // Alif with hamza above
-            .replaceAll('Ø¢', 'آ') // Alif madda
-            .replaceAll('Ø¥', 'إ') // Alif with hamza below
-            .replaceAll('Ø¨', 'ب') // Ba
-            .replaceAll('Øª', 'ت') // Ta
-            .replaceAll('Ø«', 'ث') // Tha
-            .replaceAll('Ø¬', 'ج') // Jim
-            .replaceAll('Ø­', 'ح') // Ha
-            .replaceAll('Ø®', 'خ') // Kha
-            .replaceAll('Ø¯', 'د') // Dal
-            .replaceAll('Ø°', 'ذ') // Thal
-            .replaceAll('Ø±', 'ر') // Ra
-            .replaceAll('Ø²', 'ز') // Zay
-            .replaceAll('Ø³', 'س') // Sin
-            .replaceAll('Ø´', 'ش') // Shin
-            .replaceAll('Ø¹', 'ع') // Ain
-            .replaceAll('Ø´', 'ش') // Shin
-            .replaceAll('Øµ', 'ص') // Sad
-            .replaceAll('Ø¶', 'ض') // Dad
-            .replaceAll('Ø·', 'ط') // Ta (emphatic)
-            .replaceAll('Ø¸', 'ظ') // Zah
-            .replaceAll('Ø¹', 'ع') // Ain
-            .replaceAll('Øº', 'غ') // Ghayn
-            .replaceAll('Ù', 'ف') // Fa
-            .replaceAll('Ù', 'ق') // Qaf
-            .replaceAll('Ù', 'ك') // Kaf
-            .replaceAll('Ù', 'ل') // Lam
-            .replaceAll('Ù', 'م') // Mim
-            .replaceAll('Ù', 'ن') // Nun
-            .replaceAll('Ù', 'ه') // Ha
-            .replaceAll('Ù', 'و') // Waw
-            .replaceAll('Ù', 'ي') // Ya
-            
-            // Diacritics
-            .replaceAll('Ù', 'َ') // Fatha
-            .replaceAll('Ù', 'ُ') // Damma
-            .replaceAll('Ù', 'ِ') // Kasra
-            .replaceAll('Ù', 'ً') // Tanwin Fath (double fatha)
-            .replaceAll('Ù', 'ٌ') // Tanwin Damm (double damma)
-            .replaceAll('Ù', 'ٍ') // Tanwin Kasr (double kasra)
-            .replaceAll('Ù', 'ّ') // Shadda
-            .replaceAll('Ù', 'ْ') // Sukun
-            
-            // Additional Arabic-specific characters
-            .replaceAll('Ø©', 'ة') // Ta marbuta
-            .replaceAll('Ø¡', 'ء') // Hamza
-            .replaceAll('Ù', 'ئ') // Ya with hamza
-            .replaceAll('Ù', 'ؤ') // Waw with hamza
-            
-            // Punctuation and numerals
-            .replaceAll('Ø', '٠') // Arabic zero
-            .replaceAll('Ù', '١') // Arabic one
-            .replaceAll('Ù', '٢') // Arabic two
-            .replaceAll('Ù', '٣') // Arabic three
-            .replaceAll('Ù', '٤') // Arabic four
-            .replaceAll('Ù', '٥') // Arabic five
-            .replaceAll('Ù', '٦') // Arabic six
-            .replaceAll('Ù', '٧') // Arabic seven
-            .replaceAll('Ù', '٨') // Arabic eight
-            .replaceAll('Ù', '٩') // Arabic nine
-            
-            // Special cases
-            .replaceAll('Ù Ù', 'لا') // Lam-alif ligature
-            .replaceAll('Ù Ø£', 'لأ') // Lam-alif with hamza above
-            .replaceAll('Ù Ø¥', 'لإ') // Lam-alif with hamza below
-            
-            // Common Quranic symbols
-            .replaceAll('Û', '۞') // Sajdah
-            .replaceAll('Û', '۝') // Ruku/Section
-            
-            // Fix spaces and double encoding issues
-            .replaceAll('%20', ' ') // Space
-            .replaceAll('  ', ' '); // Double space to single space
+            .replaceAll('Ø§', 'ا')
+            .replaceAll('Ø£', 'أ')
+            .replaceAll('Ø¢', 'آ')
+            .replaceAll('Ø¥', 'إ')
+            .replaceAll('Ø¨', 'ب')
+            .replaceAll('Øª', 'ت')
+            .replaceAll('Ø«', 'ث')
+            .replaceAll('Ø¬', 'ج')
+            .replaceAll('Ø­', 'ح')
+            .replaceAll('Ø®', 'خ')
+            .replaceAll('Ø¯', 'د')
+            .replaceAll('Ø°', 'ذ')
+            .replaceAll('Ø±', 'ر')
+            .replaceAll('Ø²', 'ز')
+            .replaceAll('Ø³', 'س')
+            .replaceAll('Ø´', 'ش')
+            .replaceAll('Ø¹', 'ع')
+            .replaceAll('Øµ', 'ص')
+            .replaceAll('Ø¶', 'ض')
+            .replaceAll('Ø·', 'ط')
+            .replaceAll('Ø¸', 'ظ')
+            .replaceAll('Ø¹', 'ع')
+            .replaceAll('Øº', 'غ')
+            .replaceAll('Ù', 'ف')
+            .replaceAll('Ù', 'ق')
+            .replaceAll('Ù', 'ك')
+            .replaceAll('Ù', 'ل')
+            .replaceAll('Ù', 'م')
+            .replaceAll('Ù', 'ن')
+            .replaceAll('Ù', 'ه')
+            .replaceAll('Ù', 'و')
+            .replaceAll('Ù', 'ي')
+            .replaceAll('Ù', 'َ')
+            .replaceAll('Ù', 'ُ')
+            .replaceAll('Ù', 'ِ')
+            .replaceAll('Ù', 'ً')
+            .replaceAll('Ù', 'ٌ')
+            .replaceAll('Ù', 'ٍ')
+            .replaceAll('Ù', 'ّ')
+            .replaceAll('Ù', 'ْ')
+            .replaceAll('Ø©', 'ة')
+            .replaceAll('Ø¡', 'ء')
+            .replaceAll('Ù', 'ئ')
+            .replaceAll('Ù', 'ؤ')
+            .replaceAll('Ø', '٠')
+            .replaceAll('Ù', '١')
+            .replaceAll('Ù', '٢')
+            .replaceAll('Ù', '٣')
+            .replaceAll('Ù', '٤')
+            .replaceAll('Ù', '٥')
+            .replaceAll('Ù', '٦')
+            .replaceAll('Ù', '٧')
+            .replaceAll('Ù', '٨')
+            .replaceAll('Ù', '٩')
+            .replaceAll('Ù Ù', 'لا')
+            .replaceAll('Ù Ø£', 'لأ')
+            .replaceAll('Ù Ø¥', 'لإ')
+            .replaceAll('Û', '۞')
+            .replaceAll('Û', '۝')
+            .replaceAll('%20', ' ')
+            .replaceAll('  ', ' ');
       }
     }
     return text;
+  }
+
+  // Stop playback function
+  Future<void> _stopPlayback() async {
+    await _audioPlayer.stop();
+    setState(() {
+      _isPlaying = false;
+    });
+  }
+
+  // Play recording function
+  Future<void> _playRecording() async {
+    if (_recordingPath != null) {
+      await _audioPlayer.setFilePath(_recordingPath!);
+      _audioPlayer.play();
+      setState(() {
+        _isPlaying = true;
+      });
+      _audioPlayer.playerStateStream.listen((state) {
+        if (state.processingState == ProcessingState.completed) {
+          setState(() {
+            _isPlaying = false;
+          });
+        }
+      });
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Hifz'),
+        title: Text(surahName != null ? 'Hifz: $surahName' : 'Hifz'),
         backgroundColor: const Color(0xFF00A896),
         foregroundColor: Colors.white,
         elevation: 0,
@@ -389,6 +344,47 @@ class _HifzPageState extends State<HifzPage> {
             mainAxisAlignment: MainAxisAlignment.center,
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
+              // Display surah info if available
+              if (surahNumber != null) ...[
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF00A896).withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: const Color(0xFF00A896), width: 1),
+                  ),
+                  child: Column(
+                    children: [
+                      Text(
+                        arabicName ?? '',
+                        style: const TextStyle(
+                          fontSize: 24,
+                          fontWeight: FontWeight.bold,
+                          fontFamily: 'Scheherazade',
+                        ),
+                        textDirection: TextDirection.rtl,
+                      ),
+                      Text(
+                        'Surah ${surahNumber ?? ''}: ${surahName ?? ''}',
+                        style: const TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                      Text(
+                        '${ayahCount ?? ''} Ayahs',
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: Theme.of(context).colorScheme.onBackground.withOpacity(0.7),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 30),
+              ],
+              
+              // Rest of the original build method content
               Icon(
                 Icons.auto_stories,
                 size: 80,
@@ -480,7 +476,7 @@ class _HifzPageState extends State<HifzPage> {
                 // API Processing Button
                 const SizedBox(height: 30),
                 ElevatedButton.icon(
-                  onPressed: (_isProcessing || _recordingPath == null) ? null : _processAudioWithAPI,
+                  onPressed: (_isProcessing || _recordingPath == null) ? null : () => _enqueueApiRequest(_recordingPath!),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFF1F8A70),
                     foregroundColor: Colors.white,
@@ -497,7 +493,7 @@ class _HifzPageState extends State<HifzPage> {
                 ),
                 
                 // Transcription Display
-                if (_transcription != null) ...[
+                if (_transcriptions.isNotEmpty) ...[
                   const SizedBox(height: 20),
                   Container(
                     width: double.infinity,
@@ -511,7 +507,7 @@ class _HifzPageState extends State<HifzPage> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         const Text(
-                          'Transcription:',
+                          'Transcriptions:',
                           style: TextStyle(
                             fontWeight: FontWeight.bold,
                             fontSize: 18,
@@ -519,16 +515,20 @@ class _HifzPageState extends State<HifzPage> {
                           ),
                         ),
                         const SizedBox(height: 8),
-                        Text(
-                          _transcription!,
-                          style: const TextStyle(
-                            fontSize: 18, // Slightly larger for better readability
-                            fontWeight: FontWeight.w500,
-                            color: Colors.black, // Set text color to black
-                            fontFamily: 'Scheherazade', // Use Arabic font if available
+                        for (var transcription in _transcriptions)
+                          Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 4),
+                            child: Text(
+                              transcription,
+                              style: const TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.w500,
+                                color: Colors.black,
+                                fontFamily: 'Scheherazade',
+                              ),
+                              textDirection: TextDirection.rtl,
+                            ),
                           ),
-                          textDirection: TextDirection.rtl, // Right to left for Arabic
-                        ),
                       ],
                     ),
                   ),
@@ -569,6 +569,10 @@ class _HifzPageState extends State<HifzPage> {
             ],
           ),
         ),
+      ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: _isRecording ? _stopRecording : _startRecording,
+        child: Icon(_isRecording ? Icons.stop : Icons.mic),
       ),
     );
   }

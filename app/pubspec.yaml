@@ -23,6 +23,10 @@ dependencies:
   just_audio: ^0.9.46
   path_provider: ^2.1.5
   path: ^1.9.1
+  async: ^2.11.0
+  queue: ^3.4.0
+  csv: ^6.0.0
+
 
 dev_dependencies:
   flutter_test:
@@ -33,6 +37,7 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
-  
+  assets:
+    - assets/data/Arabic-Original.csv
   fonts:
     - family: Scheherazade

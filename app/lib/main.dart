@@ -9,6 +9,7 @@ import 'pages/login_page.dart';  // Add this import
 import 'pages/signup_page.dart';  // Add this import
 import 'package:provider/provider.dart';
 import 'services/user_provider.dart';
+import 'pages/hifz_select_surah_page.dart';
 
 void main() {
   runApp(
@@ -50,7 +51,7 @@ class QuranEchoApp extends StatelessWidget {
       routes: {
         '/': (context) => const HomePage(),
         '/makharij': (context) => const MakharijPracticePage(),
-        // We'll handle navigation to MakharijPage with parameters directly
+        '/hifz_select': (context) => const HifzSelectSurahPage(), // Add this line
         '/hifz': (context) => const HifzPage(),
         '/recite': (context) => const RecitePage(),
         '/lehja': (context) => const ReciteSelectQariPage(),
