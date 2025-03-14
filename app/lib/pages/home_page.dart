@@ -189,22 +189,39 @@ class HomePage extends StatelessWidget {
                         
                         const SizedBox(height: 20), // Add spacing between rows
                         
-                        // Second row with only Lehja card centered
+                        // Second row with Lehja and Read Quran cards
                         Padding(
                           padding: const EdgeInsets.symmetric(horizontal: 20.0),
-                          child: Center(
-                            child: SizedBox(
-                              width: 150, // Match the width of cards in the first row
-                              child: MenuCard(
-                                title: 'Lehja',
-                                description: 'Learn recitation styles',
-                                icon: Icons.headphones,
-                                color: const Color(0xFF05668D),
-                                onTap: () => Navigator.pushNamed(context, '/lehja'),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                            children: [
+                              // Lehja Card
+                              Flexible(
+                                child: MenuCard(
+                                  title: 'Lehja',
+                                  description: 'Learn recitation styles',
+                                  icon: Icons.headphones,
+                                  color: const Color(0xFF05668D),
+                                  onTap: () => Navigator.pushNamed(context, '/lehja'),
+                                ),
                               ),
-                            ),
+                              
+                              const SizedBox(width: 10), // Add spacing between cards
+                              
+                              // Read Quran Card
+                              Flexible(
+                                child: MenuCard(
+                                  title: 'Read Quran',
+                                  description: 'Read the Holy Quran',
+                                  icon: Icons.book,
+                                  color: const Color(0xFF00A896),
+                                  onTap: () => Navigator.pushNamed(context, '/read_select'),
+                                ),
+                              ),
+                            ],
                           ),
                         ),
+                        
                       ],
                     ),
                   ),
