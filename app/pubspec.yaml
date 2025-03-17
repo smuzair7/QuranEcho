@@ -26,7 +26,7 @@ dependencies:
   async: ^2.11.0
   queue: ^3.4.0
   csv: ^6.0.0
-
+  fl_chart: ^0.70.2
 
 dev_dependencies:
   flutter_test:
@@ -39,5 +39,6 @@ flutter:
   uses-material-design: true
   assets:
     - assets/data/Arabic-Original.csv
+    - assets/data/quran.json
   fonts:
     - family: Scheherazade

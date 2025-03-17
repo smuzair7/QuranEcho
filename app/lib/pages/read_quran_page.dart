@@ -33,44 +33,49 @@ class _ReadQuranPageState extends State<ReadQuranPage> {
 
   Future<void> _loadSurahContent() async {
     try {
-      // Load the Arabic text from the CSV file
-      final String response = await rootBundle.loadString('assets/data/Arabic-Original.csv');
+      debugPrint('Attempting to load quran.json');
+      final String jsonData = await rootBundle.loadString('assets/data/quran.json');
+      debugPrint('JSON data loaded, length: ${jsonData.length}');
       
-      // Parse the CSV content
-      final List<String> lines = const LineSplitter().convert(response);
+      final Map<String, dynamic> quranData = json.decode(jsonData);
+      debugPrint('JSON data parsed successfully, contains ${quranData.length} entries');
+      
       final int surahNumber = widget.surahInfo['surahNumber'];
       
-      // Filter lines for the selected surah
-      final List<String> surahLines = lines.where(
-        (line) => line.startsWith('$surahNumber|')
-      ).toList();
+      // Get the selected surah data
+      final Map<String, dynamic>? surahData = quranData[surahNumber.toString()];
       
-      // Parse each line into a map
-      final List<Map<String, dynamic>> parsedAyahs = surahLines.map((line) {
-        final parts = line.split('|');
-        String ayahText = parts[2];
-        
-        // Remove Bismillah from the beginning of ayahs except for Surah Al-Fatiha (1)
-        if (surahNumber != 1 && parts[1] == '1' && 
-            ayahText.startsWith('بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ')) {
-          ayahText = ayahText.replaceFirst('بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ', '').trim();
-        }
-        
-        return {
-          'surahNumber': int.parse(parts[0]),
-          'ayahNumber': int.parse(parts[1]),
-          'text': ayahText,
-        };
-      }).toList();
+      if (surahData == null) {
+        setState(() {
+          isLoading = false;
+          errorMessage = 'Surah data not found';
+        });
+        return;
+      }
+      
+      // Parse ayah data
+      final List<Map<String, dynamic>> parsedAyahs = [];
+      surahData.forEach((ayahNumber, ayahData) {
+        parsedAyahs.add({
+          'surahNumber': surahNumber,
+          'ayahNumber': int.parse(ayahNumber),
+          'text': ayahData['displayText'] ?? ayahData['text'], // Use displayText for Quran display
+          'plainText': ayahData['text'], // Keep plain text for operations like copying
+        });
+      });
+      
+      // Sort ayahs by ayah number
+      parsedAyahs.sort((a, b) => a['ayahNumber'].compareTo(b['ayahNumber']));
       
       setState(() {
         ayahs = parsedAyahs;
         isLoading = false;
       });
       
-      debugPrint('Loaded ${ayahs.length} ayahs for surah $surahNumber');
+      debugPrint('Loaded ${ayahs.length} ayahs for surah $surahNumber from JSON');
       
     } catch (e) {
+      debugPrint('Error details: $e');
       setState(() {
         isLoading = false;
         errorMessage = 'Error loading surah content: $e';
@@ -132,6 +137,9 @@ class _ReadQuranPageState extends State<ReadQuranPage> {
     // Check if we should show Bismillah (not shown for Surah 1 or Surah 9)
     final int surahNumber = widget.surahInfo['surahNumber'];
     final shouldShowBismillah = surahNumber != 1 && surahNumber != 9;
+
+    // Add this debug statement
+    debugPrint('Surah number: $surahNumber, Should show bismillah: $shouldShowBismillah');
     
     return Container(
       decoration: BoxDecoration(
@@ -260,7 +268,7 @@ class _ReadQuranPageState extends State<ReadQuranPage> {
                     icon: const Icon(Icons.content_copy),
                     tooltip: 'Copy surah text',
                     onPressed: () {
-                      final allText = ayahs.map((ayah) => ayah['text']).join(' ');
+                      final allText = ayahs.map((ayah) => ayah['plainText'] ?? ayah['text']).join(' ');
                       Clipboard.setData(ClipboardData(text: allText));
                       ScaffoldMessenger.of(context).showSnackBar(
                         const SnackBar(content: Text('Surah text copied to clipboard')),

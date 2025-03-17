@@ -9,6 +9,7 @@ import 'pages/login_page.dart';
 import 'pages/signup_page.dart';
 import 'pages/read_surah_select_page.dart'; // Add this import
 import 'pages/read_quran_page.dart'; // Add this import
+import 'pages/dashboard_page.dart'; // Add this import
 import 'package:provider/provider.dart';
 import 'services/user_provider.dart';
 import 'pages/hifz_select_surah_page.dart';
@@ -63,6 +64,7 @@ class QuranEchoApp extends StatelessWidget {
         '/read_quran': (context) => ReadQuranPage(
           surahInfo: ModalRoute.of(context)!.settings.arguments as Map<String, dynamic>,
         ), // Add this route
+        '/dashboard': (context) => const DashboardPage(), // Add this route
       },
     );
   }

@@ -14,7 +14,7 @@ class HomePage extends StatelessWidget {
     
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Quran Echo'),
+        title: const Text(''), // Removed "Quran Echo" from the title
         backgroundColor: const Color(0xFF00A896),
         foregroundColor: Colors.white,
         elevation: 0,
@@ -216,6 +216,28 @@ class HomePage extends StatelessWidget {
                                   icon: Icons.book,
                                   color: const Color(0xFF00A896),
                                   onTap: () => Navigator.pushNamed(context, '/read_select'),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        
+                        const SizedBox(height: 20), // Add spacing for new row
+                        
+                        // Third row with Dashboard card
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 20.0),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                            children: [
+                              // Dashboard Card
+                              Flexible(
+                                child: MenuCard(
+                                  title: 'Dashboard',
+                                  description: 'Track your progress',
+                                  icon: Icons.dashboard,
+                                  color: const Color(0xFF025E73),
+                                  onTap: () => Navigator.pushNamed(context, '/dashboard'),
                                 ),
                               ),
                             ],

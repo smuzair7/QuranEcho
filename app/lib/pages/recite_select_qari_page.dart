@@ -26,12 +26,20 @@ class _ReciteSelectQariPageState extends State<ReciteSelectQariPage> {
 
   void _proceedToRecitation() {
     if (_selectedReciter != null && _selectedSurah != null) {
+      // Map surah name to number and information
+      final Map<String, dynamic> surahInfo = {
+        'surahNumber': _surahs.indexOf(_selectedSurah!) + 1, 
+        'surahName': _selectedSurah,
+        'arabicName': '', // Add Arabic name if available
+      };
+      
       Navigator.push(
         context,
         MaterialPageRoute(
           builder: (context) => RecitePage(
             selectedSurah: _selectedSurah,
             selectedReciter: _selectedReciter,
+            surahInfo: surahInfo,
           ),
         ),
       );
