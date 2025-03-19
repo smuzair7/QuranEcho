@@ -1,0 +1,46 @@
+name: quran_echo
+description: A Quran learning and memorization app
+
+publish_to: 'none'
+
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.3.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  cupertino_icons: ^1.0.6
+  flutter_riverpod: ^2.5.1
+  go_router: ^13.2.0
+  google_fonts: ^6.1.0
+  flutter_svg: ^2.0.10+1
+  shared_preferences: ^2.2.2
+  provider: ^6.1.2
+  http: ^1.2.1
+  record: ^5.2.1
+  just_audio: ^0.9.46
+  path_provider: ^2.1.5
+  path: ^1.9.1
+  async: ^2.11.0
+  queue: ^3.4.0
+  csv: ^6.0.0
+  fl_chart: ^0.70.2
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^3.0.1
+  build_runner: ^2.4.8
+  flutter_launcher_icons: ^0.13.1
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/data/Arabic-Original.csv
+    - assets/data/quran.json
+    - assets/data/
+    - assets/audio/reciters/abdul_basit/fatihah/
+  fonts:
+    - family: Scheherazade
