@@ -409,18 +409,18 @@ class _RevisionPageState extends State<RevisionPage> {
   // Helper methods for text comparison
   String _prepareTextForComparison(String text) {
     // Remove diacritics and normalize text
-    final nonEssentialDiacritics = [
-      '\u064B', '\u064C', '\u064D', '\u064E', '\u064F',
-      '\u0650', '\u0651', '\u0652', '\u0653', '\u0654',
-      '\u0655', '\u0656', '\u0657', '\u0658', '\u0659',
-      '\u065A', '\u065B', '\u065C', '\u065D', '\u065E',
-      '\u065F', '\u0670'
-    ];
+    // final nonEssentialDiacritics = [
+    //   '\u064B', '\u064C', '\u064D', '\u064E', '\u064F',
+    //   '\u0650', '\u0651', '\u0652', '\u0653', '\u0654',
+    //   '\u0655', '\u0656', '\u0657', '\u0658', '\u0659',
+    //   '\u065A', '\u065B', '\u065C', '\u065D', '\u065E',
+    //   '\u065F', '\u0670'
+    // ];
 
     String result = text;
-    for (String diacritic in nonEssentialDiacritics) {
-      result = result.replaceAll(diacritic, '');
-    }
+    // for (String diacritic in nonEssentialDiacritics) {
+    //   result = result.replaceAll(diacritic, '');
+    // }
 
     // Normalize alef forms
     result = result.replaceAll('أ', 'ا');

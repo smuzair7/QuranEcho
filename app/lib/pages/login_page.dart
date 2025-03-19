@@ -33,10 +33,22 @@ class _LoginPageState extends State<LoginPage> {
       );
 
       if (result['success']) {
+        // Extract the user data from the login response
+        final userData = result['data']['user'];
+        final userId = userData['_id']; // Get the MongoDB ObjectId
+        final stats = userData['stats']; // Get the user stats
+        
+        print('Login successful, user ID: $userId'); // Debug logging
+        
         // Update the user provider when login is successful
         if (mounted) {
-          Provider.of<UserProvider>(context, listen: false)
-            .login(_usernameController.text);
+          // Pass the MongoDB ObjectId and stats to UserProvider
+          await Provider.of<UserProvider>(context, listen: false)
+            .login(
+              _usernameController.text, 
+              userId, // Pass the actual MongoDB ObjectId here
+              stats, // Pass the stats from the API response
+            );
           Navigator.pop(context);
         }
       } else {

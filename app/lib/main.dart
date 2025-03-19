@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'pages/home_page.dart';
 import 'pages/makharij_page.dart';
 import 'pages/makharij_practice_page.dart';
@@ -7,14 +8,17 @@ import 'pages/recite_page.dart';
 import 'pages/recite_select_qari_page.dart';
 import 'pages/login_page.dart';
 import 'pages/signup_page.dart';
-import 'pages/read_surah_select_page.dart'; // Add this import
-import 'pages/read_quran_page.dart'; // Add this import
-import 'pages/dashboard_page.dart'; // Add this import
+import 'pages/read_surah_select_page.dart'; 
+import 'pages/read_quran_page.dart'; 
+import 'pages/dashboard_page.dart'; 
 import 'package:provider/provider.dart';
 import 'services/user_provider.dart';
 import 'pages/hifz_select_surah_page.dart';
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await SharedPreferences.getInstance(); // Initialize shared preferences
+  
   runApp(
     ChangeNotifierProvider(
       create: (context) => UserProvider(),

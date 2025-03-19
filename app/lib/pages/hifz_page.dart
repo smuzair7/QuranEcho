@@ -10,6 +10,9 @@ import 'package:http/http.dart' as http;
 import 'package:queue/queue.dart';
 import 'dart:math' as math;
 import 'package:quran_echo/pages/revision_page.dart';
+import 'package:provider/provider.dart';
+import '../services/user_provider.dart';
+import '../services/user_stats_service.dart';
 
 class HifzPage extends StatefulWidget {
   const HifzPage({super.key});
@@ -61,18 +64,158 @@ class _HifzPageState extends State<HifzPage> {
 
   // Text visibility during recording
   bool _isTextVisible = true;
+  
+  // Add variables for stats tracking
+  final UserStatsService _userStatsService = UserStatsService();
+  DateTime? _sessionStartTime;
+  int _sessionTimeInSeconds = 0;
+  int _newlyMemorizedAyahs = 0;
+  bool _didCompleteSurah = false;
+  bool _isSessionActive = false;
 
   @override
   void initState() {
     super.initState();
     _loadSurahContent();
+    _startSession(); // Start tracking session time
   }
 
   @override
   void dispose() {
+    // Ensure stats are updated before leaving the page
+    _endSession();
+    
+    // Add a bit more delay to ensure stats are updated properly
+    if (_newlyMemorizedAyahs > 0 || _didCompleteSurah) {
+      Future.delayed(const Duration(milliseconds: 500), () {
+        // This forces the dashboard to refresh next time it's opened
+        final userProvider = Provider.of<UserProvider>(context, listen: false);
+        if (userProvider.isLoggedIn) {
+          userProvider.notifyListeners();
+        }
+      });
+    }
+    
     _audioRecorder.dispose();
     _audioPlayer.dispose();
     super.dispose();
+  }
+  
+  // Start tracking memorization session time
+  void _startSession() {
+    _sessionStartTime = DateTime.now();
+    _isSessionActive = true;
+  }
+  
+  // End tracking and calculate total time spent
+  void _endSession() {
+    if (_isSessionActive && _sessionStartTime != null) {
+      final now = DateTime.now();
+      _sessionTimeInSeconds = now.difference(_sessionStartTime!).inSeconds;
+      _isSessionActive = false;
+      
+      // Update stats to backend if user made progress
+      if (_newlyMemorizedAyahs > 0 || _didCompleteSurah) {
+        _updateUserStatsToBackend();
+      }
+    }
+  }
+  
+  // Renamed method for clarity
+  Future<void> _updateUserStatsToBackend() async {
+    final userProvider = Provider.of<UserProvider>(context, listen: false);
+    
+    if (!userProvider.isLoggedIn || userProvider.userId == null) {
+      print('User not logged in, stats not saved');
+      return;
+    }
+    
+    final userId = userProvider.userId!;
+    print('Updating stats for user ID: $userId');
+    print('Stats to update: Ayahs+$_newlyMemorizedAyahs, Completed surah: $_didCompleteSurah, Time: ${(_sessionTimeInSeconds / 60).ceil()}min');
+    
+    try {
+      // Get current stats first
+      final statsResult = await _userStatsService.getUserStats(userId);
+      
+      if (statsResult['success']) {
+        final stats = Map<String, dynamic>.from(statsResult['data']);
+        print('Current stats before update: ${stats.toString()}');
+        
+        // Update stats with new progress
+        final int currentAyats = stats['memorizedAyats'] ?? 0;
+        final int currentSurahs = stats['memorizedSurahs'] ?? 0;
+        final int currentTimeSpent = stats['timeSpentMinutes'] ?? 0;
+        
+        stats['memorizedAyats'] = currentAyats + _newlyMemorizedAyahs;
+        
+        // Only increment memorized surahs if the user completed the surah
+        if (_didCompleteSurah) {
+          stats['memorizedSurahs'] = currentSurahs + 1;
+        }
+        
+        // Add session time to total time spent (convert seconds to minutes)
+        stats['timeSpentMinutes'] = currentTimeSpent + (_sessionTimeInSeconds / 60).ceil();
+        
+        // Update streak data - set today's progress
+        final now = DateTime.now();
+        final dayIndex = now.weekday - 1; // 0 for Monday, 6 for Sunday
+        
+        List<int> weeklyProgress = List<int>.from(stats['weeklyProgress'] ?? [0, 0, 0, 0, 0, 0, 0]);
+        weeklyProgress[dayIndex] = weeklyProgress[dayIndex] + _newlyMemorizedAyahs;
+        stats['weeklyProgress'] = weeklyProgress;
+        
+        // Update lastActivityDate
+        stats['lastActivityDate'] = DateTime.now().toIso8601String();
+        
+        print('Updated stats to send: ${stats.toString()}');
+        
+        // IMPORTANT FIX: The debug output for API requests
+        print('Making API call to: http://192.168.100.113:3000/user-stats/$userId');
+        print('Request body: ${jsonEncode(stats)}');
+        
+        // Send updated stats to backend - we need to see what's being sent in detail
+        try {
+          final response = await http.put(
+            Uri.parse('http://192.168.100.113:3000/user-stats/$userId'),
+            headers: {'Content-Type': 'application/json'},
+            body: jsonEncode(stats),
+          );
+          
+          print('API response status: ${response.statusCode}');
+          print('API response body: ${response.body}');
+          
+          if (response.statusCode == 200) {
+            print('Stats updated successfully in backend!');
+            
+            // Also update the UserProvider state - this is critical for UI refresh
+            await userProvider.updateUserStats(stats);
+            print('UserProvider stats updated!');
+            
+            // Update daily progress for the streak calculation
+            final weeklyResult = await _userStatsService.updateWeeklyProgress(userId, dayIndex, weeklyProgress[dayIndex]);
+            print('Weekly progress update result: ${weeklyResult['success']}');
+            
+            // Force a rebuild of any widgets that depend on UserProvider
+            if (mounted) {
+              setState(() {
+                // Just triggering a rebuild
+              });
+            }
+          } else {
+            print('Failed to update stats: ${response.body}');
+          }
+        } catch (e) {
+          print('HTTP error when updating stats: $e');
+          print('Stack trace: ${StackTrace.current}');
+        }
+      } else {
+        print('Failed to get current stats: ${statsResult['message']}');
+      }
+    } catch (e) {
+      print('Error updating stats: $e');
+      print('Stack trace: ${StackTrace.current}');
+    }
   }
 
   Future<void> _loadSurahContent() async {
@@ -361,42 +504,44 @@ class _HifzPageState extends State<HifzPage> {
   }
 
   void _verifyRecitationAndProgress() {
-  if (_transcriptions.isEmpty) return;
-
-  String originalText = _currentAyah!['displayText'] ?? _currentAyah!['text'];
-  String cleanOriginal = _prepareTextForComparison(originalText);
-  String cleanTranscription = _prepareTextForComparison(_transcriptions.last);
-
-  // Calculate match percentage
-  int matchScore = _calculateMatchScore(cleanTranscription, cleanOriginal);
-  int passThreshold = 70; // 70% accuracy required to pass
-
-  bool isPassed = matchScore >= passThreshold;
-
-  setState(() {
-    _hasVerifiedCurrentAyah = true;
-
-    if (isPassed && !_memorizedAyahIndices.contains(_currentAyahIndex)) {
-      _memorizedAyahIndices.add(_currentAyahIndex);
-    }
-    
-    // Always show text after recitation for review
-    _isTextVisible = true;
-    
-    // Show success message based on result
-    _recordingStatus = isPassed 
-        ? 'Great ($matchScore% match)'
-        : 'Try again ($matchScore% match)';
-  });
+    if (_transcriptions.isEmpty) return;
   
-  // Automatically move to next ayah if recitation is correct
-  // if (isPassed) {
-  //   // Add a small delay to show the success message before moving
-  //   Future.delayed(const Duration(seconds: 2), () {
-  //     _moveToNextAyah();
-  //   });
-  // }
-}
+    String originalText = _currentAyah!['displayText'] ?? _currentAyah!['text'];
+    String cleanOriginal = _prepareTextForComparison(originalText);
+    String cleanTranscription = _prepareTextForComparison(_transcriptions.last);
+  
+    // Calculate match percentage
+    int matchScore = _calculateMatchScore(cleanTranscription, cleanOriginal);
+    int passThreshold = 70; // 70% accuracy required to pass
+  
+    bool isPassed = matchScore >= passThreshold;
+  
+    setState(() {
+      _hasVerifiedCurrentAyah = true;
+  
+      // Check if this is a newly memorized ayah
+      if (isPassed && !_memorizedAyahIndices.contains(_currentAyahIndex)) {
+        _memorizedAyahIndices.add(_currentAyahIndex);
+        _newlyMemorizedAyahs++; // Track newly memorized ayahs for stats
+        
+        // Check if user completed the entire surah
+        if (_memorizedAyahIndices.length == ayahs.length) {
+          _didCompleteSurah = true;
+          
+          // Update stats immediately when completing a surah
+          _updateUserStatsToBackend();
+        }
+      }
+      
+      // Always show text after recitation for review
+      _isTextVisible = true;
+      
+      // Show success message based on result
+      _recordingStatus = isPassed 
+          ? 'Great ($matchScore% match)'
+          : 'Try again ($matchScore% match)';
+    });
+  }
 
   void _moveToNextAyah() {
     if (_currentAyahIndex < ayahs.length - 1) {
@@ -414,12 +559,44 @@ class _HifzPageState extends State<HifzPage> {
         context: context,
         builder: (context) => AlertDialog(
           title: const Text('Congratulations!'),
-          content: const Text('You have completed memorization of this surah. MashaAllah!'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text('You have completed memorization of this surah. MashaAllah!'),
+              if (_newlyMemorizedAyahs > 0)
+                Padding(
+                  padding: const EdgeInsets.only(top: 16.0),
+                  child: Text(
+                    'New ayahs memorized: $_newlyMemorizedAyahs',
+                    style: const TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                ),
+              if (_didCompleteSurah)
+                Padding(
+                  padding: const EdgeInsets.only(top: 8.0),
+                  child: Text(
+                    'Surah completed! 🎉',
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: Colors.green.shade700,
+                    ),
+                  ),
+                ),
+            ],
+          ),
           actions: [
             TextButton(
               onPressed: () {
                 Navigator.pop(context);
                 _stopPracticing();
+                
+                // Check if all ayahs were memorized
+                if (_memorizedAyahIndices.length == ayahs.length) {
+                  _didCompleteSurah = true;
+                }
+                
+                // Force stats update when completing the surah
+                _endSession();
               },
               child: const Text('Return to Surah View'),
             ),
@@ -505,46 +682,39 @@ class _HifzPageState extends State<HifzPage> {
   }
 
   String _prepareTextForComparison(String text) {
-    // Remove diacritics and normalize text
-    final nonEssentialDiacritics = [
-      '\u064B', '\u064C', '\u064D', '\u064E', '\u064F',
-      '\u0650', '\u0651', '\u0652', '\u0653', '\u0654',
-      '\u0655', '\u0656', '\u0657', '\u0658', '\u0659',
-      '\u065A', '\u065B', '\u065C', '\u065D', '\u065E',
-      '\u065F', '\u0670'
-    ];
+  // Instead of removing diacritics, only normalize alef forms
+  // and perform other basic normalizations
+  String result = text;
+  
+  // Normalize alef forms
+  result = result.replaceAll('أ', 'ا');
+  result = result.replaceAll('إ', 'ا');
+  result = result.replaceAll('آ', 'ا');
 
-    String result = text;
-    for (String diacritic in nonEssentialDiacritics) {
-      result = result.replaceAll(diacritic, '');
-    }
-
-    // Normalize alef forms
-    result = result.replaceAll('أ', 'ا');
-    result = result.replaceAll('إ', 'ا');
-    result = result.replaceAll('آ', 'ا');
-
-    return result.trim();
-  }
+  // You might still want to normalize some whitespace
+  result = result.trim();
+  
+  return result;
+}
 
   int _calculateMatchScore(String transcription, String original) {
-    List<String> originalWords = original.split(' ');
-    List<String> transcriptionWords = transcription.split(' ');
+  List<String> originalWords = original.split(' ');
+  List<String> transcriptionWords = transcription.split(' ');
 
-    Set<String> originalWordsSet = originalWords.toSet();
-    int correctWords = 0;
-
-    for (String word in transcriptionWords) {
-      if (originalWordsSet.contains(word)) {
-        correctWords++;
-      }
+  int correctWords = 0;
+  
+  // More precise matching - compare each word
+  for (int i = 0; i < transcriptionWords.length; i++) {
+    if (i < originalWords.length && transcriptionWords[i] == originalWords[i]) {
+      correctWords++;
     }
+  }
 
   int totalWords = math.max(originalWords.length, transcriptionWords.length);
-    if (totalWords == 0) return 0;
+  if (totalWords == 0) return 0;
 
-    return (correctWords * 100 ~/ totalWords);
-  }
+  return (correctWords * 100 ~/ totalWords);
+}
 
 Widget _buildTranscriptionWithHighlightedErrors(String transcription, Map<String, dynamic> ayah) {
   String originalText = ayah['displayText'] ?? ayah['text'];
@@ -586,14 +756,88 @@ Widget _buildTranscriptionWithHighlightedErrors(String transcription, Map<String
   );
 }
 
+  // Add this method to build a stats summary widget
+  Widget _buildStatsSummary() {
+    if (_newlyMemorizedAyahs == 0) return const SizedBox.shrink();
+    
+    return Container(
+      margin: const EdgeInsets.symmetric(vertical: 8),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: const Color(0xFF1E1E1E),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: const Color(0xFF333333)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Session Progress',
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+              color: Colors.white,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Newly memorized ayahs: $_newlyMemorizedAyahs',
+            style: const TextStyle(
+              fontSize: 14,
+              color: Colors.white70,
+            ),
+          ),
+          if (_sessionStartTime != null)
+            Text(
+              'Session time: ${DateTime.now().difference(_sessionStartTime!).inMinutes} mins',
+              style: const TextStyle(
+                fontSize: 14,
+                color: Colors.white70,
+              ),
+            ),
+          if (_didCompleteSurah)
+            Text(
+              '✓ Completed surah',
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.bold,
+                color: Colors.green.shade400,
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    // Ensure UserProvider is accessible here
+    final userProvider = Provider.of<UserProvider>(context, listen: false);
+    
     return Scaffold(
       appBar: AppBar(
         title: Text(surahName != null ? 'Hifz: $surahName' : 'Hifz'),
         backgroundColor: const Color(0xFF00A896),
         foregroundColor: Colors.white,
         elevation: 0,
+        // Add a refresh button to manually update stats
+        actions: [
+          if (_newlyMemorizedAyahs > 0 || _didCompleteSurah)
+            IconButton(
+              icon: const Icon(Icons.sync),
+              tooltip: 'Update Stats',
+              onPressed: () {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Updating statistics...')),
+                );
+                _updateUserStatsToBackend().then((_) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Statistics updated')),
+                  );
+                });
+              },
+            ),
+        ],
       ),
       body: isLoading 
         ? const Center(child: CircularProgressIndicator())
@@ -842,13 +1086,27 @@ Widget _buildTranscriptionWithHighlightedErrors(String transcription, Map<String
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Text(
-                'Memorized: ${_memorizedAyahIndices.length}/${ayahs.length} Ayahs',
-                style: const TextStyle(
-                  fontWeight: FontWeight.bold, 
-                  fontSize: 16,
-                  color: Colors.white,
-                ),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    'Memorized: ${_memorizedAyahIndices.length}/${ayahs.length} Ayahs',
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold, 
+                      fontSize: 16,
+                      color: Colors.white,
+                    ),
+                  ),
+                  // Session timer
+                  if (_isSessionActive && _sessionStartTime != null)
+                    Text(
+                      'Session: ${DateTime.now().difference(_sessionStartTime!).inMinutes}m',
+                      style: const TextStyle(
+                        fontSize: 14,
+                        color: Colors.white70,
+                      ),
+                    ),
+                ],
               ),
               const SizedBox(height: 8),
               ClipRRect(
@@ -863,6 +1121,12 @@ Widget _buildTranscriptionWithHighlightedErrors(String transcription, Map<String
           ),
         ),
         
+        // Display session stats
+        if (_newlyMemorizedAyahs > 0)
+          _buildStatsSummary(),
+            
+        // Rest of UI
+        // ...existing code...
         // Add dropdown for direct navigation to any verse
         Container(
           width: double.infinity,
