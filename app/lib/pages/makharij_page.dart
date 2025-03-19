@@ -1,12 +1,13 @@
 import 'dart:io';
 import 'dart:async'; // Add this import for TimeoutException
+import 'dart:typed_data';
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:record/record.dart';
 import 'package:just_audio/just_audio.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as path;
 import 'package:http/http.dart' as http;
-import 'dart:convert';
 
 class MakharijPage extends StatefulWidget {
   final String? letter;
@@ -62,6 +63,51 @@ class _MakharijPageState extends State<MakharijPage> {
     'ظ': 'Zua' // 27
   };
 
+  // Add these constants to your _MakharijPageState class
+  static const String _tarteelApiToken = "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";
+  static const String _tarteelApiUrl = "https://api-inference.huggingface.co/models/tarteel-ai/whisper-base-ar-quran";
+
+ // Map Arabic letters to their most common transcription patterns
+final Map<String, List<String>> _letterToTranscriptionPatterns = {
+  // Problematic letters
+  'خ': ['خ', 'kha', 'خا', 'kh', 'خاء'], // Kha
+  'ف': ['ف', 'fa', 'فا', 'f', 'فاء'],   // Faa
+  'ذ': ['ذ', 'dh', 'ذا', 'z', 'ذال', 'th'], // Zaal
+  'ث': ['ث', 'th', 'ثا', 's', 'ثاء', 'sa'], // Saa/Thaa
+  'ح': ['ح', 'h', 'حا', 'ha', 'حاء'], // Hha
+  'ض': ['ض', 'dh', 'ضا', 'd', 'ضاد', 'daad'], // Duad
+  'ع': ['ع', 'a', 'عا', '\'', 'عين', 'ain'], // Aain
+  'ص': ['ص', 's', 'صا', 'sa', 'صاد', 'saad'], // Saud
+  'غ': ['غ', 'gh', 'غا', 'g', 'غين', 'gain', 'ghain'], // Ghain
+  'ظ': ['ظ', 'z', 'ظا', 'dh', 'ظاء', 'za', 'dhaa'], // Zua
+  
+  // Regular letters - also including patterns for completeness
+  'ا': ['ا', 'alif', 'ألف', 'a', 'الف'], // Alif
+  'ب': ['ب', 'ba', 'با', 'b', 'باء'], // Ba
+  'ت': ['ت', 'ta', 'تا', 't', 'تاء'], // Ta
+  'ج': ['ج', 'ja', 'جا', 'j', 'جيم', 'jeem'], // Jeem
+  'د': ['د', 'da', 'دا', 'd', 'دال'], // Dal
+  'ر': ['ر', 'ra', 'را', 'r', 'راء'], // Raa
+  'ز': ['ز', 'za', 'زا', 'z', 'زاي', 'zay'], // Zaa
+  'س': ['س', 'sa', 'سا', 's', 'سين', 'seen'], // Seen
+  'ش': ['ش', 'sha', 'شا', 'sh', 'شين', 'sheen'], // Sheen
+  'ط': ['ط', 'ta', 'طا', 't', 'طاء', 'taa'], // Tua
+  'ك': ['ك', 'ka', 'كا', 'k', 'كاف', 'kaaf'], // Kaif
+  'ل': ['ل', 'la', 'لا', 'l', 'لام', 'laam'], // Laam
+  'م': ['م', 'ma', 'ما', 'm', 'ميم', 'meem'], // Meem
+  'ن': ['ن', 'na', 'نا', 'n', 'نون', 'noon'], // Noon
+  'ه': ['ه', 'ha', 'ها', 'h', 'هاء'], // Haa
+  'و': ['و', 'wa', 'وا', 'w', 'واو', 'waw'], // Wao
+  'ي': ['ي', 'ya', 'يا', 'y', 'ياء', 'yaa'], // Yaa
+  'ق': ['ق', 'qa', 'قا', 'q', 'قاف', 'qaaf', 'qaf'], // Qauf
+  
+  // Additional letters/variations
+  'أ': ['أ', 'a', 'hamza', 'همزة', 'ء', 'الهمزة'], // Hamza
+  'إ': ['إ', 'i', 'همزة كسرة', 'همزة تحت الألف'], // Hamza with kasra
+  'آ': ['آ', 'aa', 'ألف مد', 'ألف ممدودة'], // Alif Madd
+  'ة': ['ة', 'ta marbuta', 'تاء مربوطة', 'ـة', 'taa'], // Taa Marbuta
+  'ى': ['ى', 'alif maqsura', 'ألف مقصورة', 'ya'], // Alif Maqsura
+};
   @override
   void dispose() {
     _audioRecorder.dispose();
@@ -197,15 +243,9 @@ class _MakharijPageState extends State<MakharijPage> {
     });
 
     try {
-      // Updated with your actual laptop IP address
-      // Option 1: For physical device on same network as laptop
-      final url = Uri.parse('http://192.168.18.37:5000/analyze_harf');
-
-      // Option 2: For Android Emulator (uncomment if using emulator)
-      // final url = Uri.parse('http://10.0.2.2:5000/analyze_harf');
-
-      final request = http.MultipartRequest('POST', url);
-
+      // First, use the custom model for primary analysis
+      final Uri url = Uri.parse('http://51.21.250.47:5000/analyze_harf');
+      
       // Add more detailed logging
       print('Sending audio file: $_recordingPath');
       print('Sending to server: ${url.toString()}');
@@ -217,7 +257,8 @@ class _MakharijPageState extends State<MakharijPage> {
 
       print('Expected harf: $expectedHarf');
 
-      // Add the audio file to the request
+      // Create a MultipartRequest for the custom model
+      final request = http.MultipartRequest('POST', url);
       request.files.add(await http.MultipartFile.fromPath(
         'audio',
         _recordingPath!,
@@ -237,13 +278,100 @@ class _MakharijPageState extends State<MakharijPage> {
       print('Response status: ${response.statusCode}');
       print('Response body: ${response.body}');
 
+      Map<String, dynamic> result;
+      bool isModelCorrect = false;
+      
       if (response.statusCode == 200) {
-        final result = json.decode(response.body);
-        setState(() {
-          _isProcessing = false;
-          _analysisResult = result;
-          _recordingStatus = 'Analysis complete';
-        });
+        result = json.decode(response.body);
+        
+        // Check if model prediction is correct
+        isModelCorrect = !result.containsKey('is_mismatch') || !result['is_mismatch'];
+        
+        // If model says correct, we can proceed with the result
+        if (isModelCorrect) {
+          setState(() {
+            _isProcessing = false;
+            _analysisResult = result;
+            _recordingStatus = 'Analysis complete';
+          });
+          return;
+        }
+        
+        // If we're here, the model thinks the pronunciation is incorrect
+        // Let's verify with the Tarteel API as a backup
+        if (_isLetterProblematic(widget.letter)) {
+          print('Model detected incorrect pronunciation. Verifying with Tarteel API...');
+          
+          // Do a second check with Tarteel API
+          final bool isTarteelCorrect = await _verifyWithTarteelAPI();
+          
+          if (isTarteelCorrect) {
+            // Tarteel API thinks it's correct, override the model result
+            print('Tarteel API verification succeeded. Overriding model result.');
+            
+            // Create a positive result override
+            final Map<String, dynamic> overrideResult = {
+              'predicted': expectedHarf,
+              'expected': expectedHarf,
+              'confidence': 85.0, // Use a moderate confidence value
+              'assessment': 'Good',
+              'feedback': 'Your pronunciation is good. Our verification system confirmed it.',
+              'is_mismatch': false,
+              'verification_method': 'Tarteel API backup',
+              'original_model_prediction': result['predicted']
+            };
+            
+            setState(() {
+              _isProcessing = false;
+              _analysisResult = overrideResult;
+              _recordingStatus = 'Analysis complete (verified)';
+            });
+            return;
+          } else {
+            // Both model and Tarteel think it's incorrect - show the error UI
+            print('Both model and Tarteel API confirm incorrect pronunciation.');
+            
+            // Model's detected letter
+            final String modelDetectedLetter = result['predicted'] ?? '';
+            
+            // Check if both agree on the detected letter
+            final bool bothAgreeOnDetection = 
+                _tarteelDetectedLetter != null && 
+                _tarteelDetectedLetter == modelDetectedLetter;
+            
+            // If they disagree, modify the result to hide the detected letter
+            if (!bothAgreeOnDetection) {
+              print('Model detected "$modelDetectedLetter" but Tarteel detected "$_tarteelDetectedLetter" - hiding detected letter');
+              
+              // Create a modified result that will prevent showing the detected letter
+              final Map<String, dynamic> modifiedResult = Map<String, dynamic>.from(result);
+              modifiedResult['show_detected'] = false;
+              modifiedResult['feedback'] = 'Your pronunciation needs improvement. Try again.';
+              
+              setState(() {
+                _isProcessing = false;
+                _analysisResult = modifiedResult;
+                _recordingStatus = 'Analysis complete';
+              });
+              return;
+            }
+            
+            // They agree on what was detected, show the original result
+            setState(() {
+              _isProcessing = false;
+              _analysisResult = result;
+              _recordingStatus = 'Analysis complete';
+            });
+            return;
+          }
+        } else {
+          // For non-problematic letters, trust the model
+          setState(() {
+            _isProcessing = false;
+            _analysisResult = result;
+            _recordingStatus = 'Analysis complete';
+          });
+        }
       } else {
         setState(() {
           _isProcessing = false;
@@ -260,6 +388,147 @@ class _MakharijPageState extends State<MakharijPage> {
       // Show a more user-friendly error dialog
       _showConnectionErrorDialog();
     }
+  }
+
+  // Helper method to check if a letter is in our problematic list
+  bool _isLetterProblematic(String? letter) {
+    if (letter == null) return false;
+    return _letterToTranscriptionPatterns.containsKey(letter);
+  }
+
+  // New method to verify with Tarteel API
+  Future<bool> _verifyWithTarteelAPI() async {
+    try {
+      if (_recordingPath == null || widget.letter == null) return false;
+      
+      print('Verifying with Tarteel API...');
+      
+      final File audioFile = File(_recordingPath!);
+      final bytes = await audioFile.readAsBytes();
+      
+      // Send to Tarteel API
+      final response = await http.post(
+        Uri.parse(_tarteelApiUrl),
+        headers: {
+          "Authorization": "Bearer $_tarteelApiToken",
+          "Content-Type": "audio/wav",
+        },
+        body: bytes,
+      ).timeout(
+        const Duration(seconds: 15), // Add timeout
+        onTimeout: () => http.Response('{"error":"timeout"}', 408),
+      );
+      
+      if (response.statusCode == 200) {
+        final decodedResponse = jsonDecode(response.body);
+        String transcription = '';
+        
+        if (decodedResponse is Map && decodedResponse.containsKey('text')) {
+          transcription = decodedResponse['text'];
+        } else if (decodedResponse is List && decodedResponse.isNotEmpty && decodedResponse[0] is Map) {
+          transcription = decodedResponse[0]['generated_text'] ?? '';
+        } else {
+          transcription = decodedResponse.toString();
+        }
+        
+        // Fix Arabic encoding issues
+        transcription = _fixArabicEncoding(transcription);
+        
+        print('Tarteel API transcription: $transcription');
+        
+        // Check if transcription contains patterns for this letter
+        final patterns = _letterToTranscriptionPatterns[widget.letter!] ?? [];
+        
+        // Check if any pattern matches the expected letter
+        for (final pattern in patterns) {
+          if (transcription.contains(pattern)) {
+            print('Found matching pattern "$pattern" in transcription');
+            return true; // Tarteel thinks it's correct
+          }
+        }
+        
+        // If the expected letter appears directly in the transcription
+        if (transcription.contains(widget.letter!)) {
+          print('Found letter directly in transcription');
+          return true; // Tarteel thinks it's correct
+        }
+        
+        // Store what Tarteel detected for comparison
+        _tarteelDetectedLetter = _detectLetterFromTranscription(transcription);
+        print('Tarteel detected: $_tarteelDetectedLetter');
+        
+        return false; // Tarteel thinks it's incorrect
+      } else {
+        print('Tarteel API error: ${response.statusCode}');
+        return false;
+      }
+    } catch (e) {
+      print('Error verifying with Tarteel API: $e');
+      return false;
+    }
+  }
+
+  // Method to fix Arabic encoding (use your existing method)
+  String _fixArabicEncoding(String text) {
+    if (text.contains('Ù') || text.contains('Ø') || text.contains('Ú')) {
+      try {
+        // Try using utf8.decode with latin1.encode
+        return utf8.decode(latin1.encode(text));
+      } catch (e) {
+        try {
+          // Try another common approach
+          final bytes = text.codeUnits.map((c) => c < 128 ? c : (c - 848)).toList();
+          return String.fromCharCodes(bytes);
+        } catch (e2) {
+          // Fall back to manual replacement
+          final Map<String, String> replacements = {
+            'Ø§': 'ا', 'Ø£': 'أ', 'Ø¢': 'آ', 'Ø¥': 'إ', 'Ø¨': 'ب',
+            'Øª': 'ت', 'Ø«': 'ث', 'Ø¬': 'ج', 'Ø­': 'ح', 'Ø®': 'خ',
+            'Ø¯': 'د', 'Ø°': 'ذ', 'Ø±': 'ر', 'Ø²': 'ز', 'Ø³': 'س',
+            'Ø´': 'ش', 'Øµ': 'ص', 'Ø¶': 'ض', 'Ø·': 'ط', 'Ø¸': 'ظ',
+            'Ø¹': 'ع', 'Øº': 'غ', 'Ù': 'ق', 'Ù': 'ك', 'Ù': 'ل',
+            'Ù': 'م', 'Ù': 'ن', 'Ù': 'ه', 'Ù': 'و', 'Ù': 'ي',
+          };
+          
+          String fixed = text;
+          replacements.forEach((k, v) {
+            fixed = fixed.replaceAll(k, v);
+          });
+          return fixed;
+        }
+      }
+    }
+    return text;
+  }
+
+  // Add this variable to store Tarteel's detection
+  String? _tarteelDetectedLetter;
+
+  // Ensure this method returns the English name of the letter in the same format 
+  // as your model's output (e.g., "Kha", "Aain", etc.)
+  String? _detectLetterFromTranscription(String transcription) {
+    // Check each letter's patterns against the transcription
+    for (final entry in _letterToTranscriptionPatterns.entries) {
+      final letter = entry.key;
+      final patterns = entry.value;
+      
+      for (final pattern in patterns) {
+        if (transcription.contains(pattern)) {
+          // Convert Arabic letter to English name for comparison with model
+          final englishName = _arabicToEnglishMap[letter];
+          print('Found pattern "$pattern" matching letter "$letter" -> "$englishName"');
+          return englishName;
+        }
+      }
+    }
+    
+    // If transcription is exactly a single character that's in our mapping
+    if (transcription.trim().length == 1 && _arabicToEnglishMap.containsKey(transcription.trim())) {
+      return _arabicToEnglishMap[transcription.trim()];
+    }
+    
+    print('No letter match found in transcription: "$transcription"');
+    return null; // No clear match found
   }
 
   void _showConnectionErrorDialog() {
@@ -425,50 +694,54 @@ class _MakharijPageState extends State<MakharijPage> {
                           ),
                         ],
                       ),
-                      const SizedBox(width: 40),
-                      const Icon(
-                        Icons.arrow_forward,
-                        color: Colors.red,
-                      ),
-                      const SizedBox(width: 40),
-                      Column(
-                        children: [
-                          Text(
-                            'Detected',
-                            style: TextStyle(
-                              fontSize: 14,
-                              color: Colors.grey[700],
+                      
+                      // Only show the detected letter if both systems agree
+                      if (!_analysisResult!.containsKey('show_detected') || _analysisResult!['show_detected'] != false) ...[
+                        const SizedBox(width: 40),
+                        const Icon(
+                          Icons.arrow_forward,
+                          color: Colors.red,
+                        ),
+                        const SizedBox(width: 40),
+                        Column(
+                          children: [
+                            Text(
+                              'Detected',
+                              style: TextStyle(
+                                fontSize: 14,
+                                color: Colors.grey[700],
+                              ),
                             ),
-                          ),
-                          const SizedBox(height: 8),
-                          Container(
-                            width: 60,
-                            height: 60,
-                            decoration: BoxDecoration(
-                              color: Colors.red.withOpacity(0.2),
-                              shape: BoxShape.circle,
-                            ),
-                            child: Center(
-                              child: Text(
-                                // Find Arabic letter that corresponds to the predicted harf
-                                _arabicToEnglishMap.entries
-                                    .firstWhere(
-                                      (entry) =>
-                                          entry.value ==
-                                          _analysisResult!['predicted'],
-                                      orElse: () => const MapEntry('?', '?'),
-                                    )
-                                    .key,
-                                style: const TextStyle(
-                                  fontSize: 40,
-                                  fontWeight: FontWeight.bold,
-                                  fontFamily: 'Scheherazade',
+                            const SizedBox(height: 8),
+                            Container(
+                              width: 60,
+                              height: 60,
+                              decoration: BoxDecoration(
+                                color: Colors.red.withOpacity(0.2),
+                                shape: BoxShape.circle,
+                              ),
+                              child: Center(
+                                child: Text(
+                                  // Find Arabic letter that corresponds to the predicted harf
+                                  _arabicToEnglishMap.entries
+                                      .firstWhere(
+                                        (entry) =>
+                                            entry.value ==
+                                            _analysisResult!['predicted'],
+                                        orElse: () => const MapEntry('?', '?'),
+                                      )
+                                      .key,
+                                  style: const TextStyle(
+                                    fontSize: 40,
+                                    fontWeight: FontWeight.bold,
+                                    fontFamily: 'Scheherazade',
+                                  ),
                                 ),
                               ),
                             ),
-                          ),
-                        ],
-                      ),
+                          ],
+                        ),
+                      ],
                     ],
                   ),
                   const SizedBox(height: 20),
