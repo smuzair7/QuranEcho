@@ -8,6 +8,7 @@ import 'dart:math' as math;
 import 'package:queue/queue.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as path;
+import 'dart:async';
 
 class RevisionPage extends StatefulWidget {
   final List<Map<String, dynamic>> ayahs;
@@ -29,7 +30,7 @@ class RevisionPage extends StatefulWidget {
   State<RevisionPage> createState() => _RevisionPageState();
 }
 
-class _RevisionPageState extends State<RevisionPage> {
+class _RevisionPageState extends State<RevisionPage> with SingleTickerProviderStateMixin {
   // Add these new variables
   bool _isFlowRecordingMode = false;
   int _currentRecitingIndex = 0;
@@ -56,14 +57,19 @@ class _RevisionPageState extends State<RevisionPage> {
   bool _isTextVisible = true;
 
   // API variables
-  static const String _apiToken = "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";
-  static const String _apiUrl = "https://api-inference.huggingface.co/models/tarteel-ai/whisper-base-ar-quran";
+  static const String _apiToken = "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";
+  static const String _apiUrl = "https://router.huggingface.co/hf-inference/models/tarteel-ai/whisper-base-ar-quran";
   bool _isProcessing = false;
   String? _apiResult;
   List<String> _transcriptions = [];
   
   // Queue for API requests
   final Queue _apiQueue = Queue();
+
+  // Animation controller for transitions
+  late AnimationController _animationController;
+  bool _isAnimating = false;
+  String _navigationMessage = "";
 
   @override
   void initState() {
@@ -72,6 +78,12 @@ class _RevisionPageState extends State<RevisionPage> {
     _endIndex = widget.defaultEndIndex; 
     _currentIndex = _startIndex;
     
+    // Initialize animation controller
+    _animationController = AnimationController(
+      vsync: this,
+      duration: Duration(milliseconds: 800),
+    );
+    
     // Configure the API Queue
     
     _showSetupDialog();
@@ -79,6 +91,7 @@ class _RevisionPageState extends State<RevisionPage> {
 
   @override
   void dispose() {
+    _animationController.dispose();
     _audioRecorder.dispose();
     _audioPlayer.dispose();
     super.dispose();
@@ -1063,6 +1076,54 @@ class _RevisionPageState extends State<RevisionPage> {
     
     return Column(
       children: [
+        // Navigation feedback overlay
+        if (_isAnimating)
+          AnimatedBuilder(
+            animation: _animationController,
+            builder: (context, child) {
+              return Container(
+                padding: EdgeInsets.symmetric(vertical: 12, horizontal: 20),
+                margin: EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: _navigationMessage.contains("Returning") 
+                      ? Colors.red.withOpacity(0.9)
+                      : Colors.deepPurple.withOpacity(0.9),
+                  borderRadius: BorderRadius.circular(12),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black26,
+                      blurRadius: 10,
+                      offset: Offset(0, 5),
+                    ),
+                  ],
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      _navigationMessage.contains("Returning")
+                          ? Icons.arrow_back
+                          : Icons.arrow_forward,
+                      color: Colors.white,
+                      size: 24 * _animationController.value,
+                    ),
+                    SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        _navigationMessage,
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            },
+          ),
+          
         // Current ayah card
         Expanded(
           child: SingleChildScrollView(
@@ -1124,24 +1185,62 @@ class _RevisionPageState extends State<RevisionPage> {
                         if (_errorMessageVisible) 
                           Container(
                             margin: EdgeInsets.symmetric(vertical: 12),
-                            padding: EdgeInsets.all(12),
+                            padding: EdgeInsets.all(16),
                             width: double.infinity,
                             decoration: BoxDecoration(
                               color: Colors.red.shade100,
                               borderRadius: BorderRadius.circular(8),
                               border: Border.all(color: Colors.red),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.red.withOpacity(0.3),
+                                  blurRadius: 8,
+                                  spreadRadius: 2,
+                                ),
+                              ],
                             ),
-                            child: Row(
+                            child: Column(
                               children: [
-                                Icon(Icons.warning_amber_rounded, color: Colors.red),
-                                SizedBox(width: 12),
-                                Expanded(
-                                  child: Text(
-                                    _errorFeedback,
-                                    style: TextStyle(
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.bold,
-                                      color: Colors.red.shade900,
+                                Row(
+                                  children: [
+                                    Icon(Icons.warning_amber_rounded, color: Colors.red, size: 28),
+                                    SizedBox(width: 12),
+                                    Expanded(
+                                      child: Text(
+                                        _errorFeedback,
+                                        style: TextStyle(
+                                          fontSize: 18,
+                                          fontWeight: FontWeight.bold,
+                                          color: Colors.red.shade900,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                SizedBox(height: 8),
+                                Align(
+                                  alignment: Alignment.centerLeft,
+                                  child: AnimatedContainer(
+                                    duration: Duration(milliseconds: 800),
+                                    padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                    decoration: BoxDecoration(
+                                      color: Colors.white,
+                                      borderRadius: BorderRadius.circular(20),
+                                      border: Border.all(color: Colors.red.shade300),
+                                    ),
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Icon(Icons.mic, color: Colors.red),
+                                        SizedBox(width: 8),
+                                        Text(
+                                          "Recording will restart in 3 seconds",
+                                          style: TextStyle(
+                                            color: Colors.red.shade800,
+                                            fontWeight: FontWeight.w500,
+                                          ),
+                                        ),
+                                      ],
                                     ),
                                   ),
                                 ),
@@ -1244,6 +1343,188 @@ const SizedBox(height: 12),
     final score = hasScore ? _matchScores[ayahIndex]! : 0;
     final isCorrect = hasScore && score >= 70;
     
+    if (!isCorrect) {
+      return Stack(
+        children: [
+          // Your existing Card...
+          Card(
+            elevation: 2, // Reduced elevation
+            margin: EdgeInsets.symmetric(vertical: 4), // Tighter margins
+            color: isCorrect ? Colors.green.shade50 : Colors.red.shade50,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(8), // Smaller radius
+              side: BorderSide(
+                color: isCorrect ? Colors.green.shade300 : Colors.red.shade300,
+                width: 1,
+              ),
+            ),
+            child: Padding(
+              padding: const EdgeInsets.all(12.0), // Reduced padding
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Compact header with all elements in one row
+                  Row(
+                    children: [
+                      // Smaller number badge
+                      Container(
+                        padding: const EdgeInsets.all(5),
+                        decoration: BoxDecoration(
+                          color: isCorrect ? Colors.green : Colors.red,
+                          shape: BoxShape.circle,
+                        ),
+                        child: Text(
+                          '${ayah['ayahNumber']}',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 12,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      // Text takes less space
+                      Expanded(
+                        child: Text(
+                          isCorrect ? 'Correct' : 'Needs Improvement',
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.bold,
+                            color: isCorrect ? Colors.green.shade800 : Colors.red.shade800,
+                          ),
+                        ),
+                      ),
+                      // Score badge is more compact
+                      if (hasScore)
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8, 
+                            vertical: 4,
+                          ),
+                          decoration: BoxDecoration(
+                            color: isCorrect ? Colors.green.shade100 : Colors.red.shade100,
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                              color: isCorrect ? Colors.green : Colors.red,
+                              width: 0.5,
+                            ),
+                          ),
+                          child: Text(
+                            '$score%',
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 12,
+                              color: isCorrect ? Colors.green.shade800 : Colors.red.shade800,
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                  
+                  // Use an expandable section for the ayah text
+                  ExpansionTile(
+                    tilePadding: EdgeInsets.symmetric(horizontal: 8, vertical: 0),
+                    title: Text(
+                      'View Ayah Text',
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w500,
+                        color: Colors.grey.shade700,
+                      ),
+                    ),
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(4),
+                          border: Border.all(color: Colors.grey.shade200),
+                        ),
+                        child: Text(
+                          ayah['displayText'] ?? ayah['text'],
+                          style: const TextStyle(
+                            fontSize: 16, // Smaller font size
+                            fontFamily: 'Scheherazade',
+                          ),
+                          textDirection: TextDirection.rtl,
+                          textAlign: TextAlign.right,
+                        ),
+                      ),
+                    ],
+                  ),
+                  
+                  // Your recitation display
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    margin: const EdgeInsets.only(top: 8),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(4),
+                      border: Border.all(color: isCorrect ? Colors.green.shade200 : Colors.red.shade200),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Your recitation:',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 13,
+                            color: isCorrect ? Colors.green.shade800 : Colors.red.shade800,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        _buildTranscriptionWithHighlightedErrors(
+                          _pendingTranscriptions[ayahIndex]!,
+                          ayah,
+                          textSize: 15, // Smaller text size
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          // Add a prominent return arrow indicator
+          Positioned(
+            top: 0,
+            right: 0,
+            child: Container(
+              padding: EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: Colors.red.shade600,
+                borderRadius: BorderRadius.only(
+                  topRight: Radius.circular(8),
+                  bottomLeft: Radius.circular(12),
+                ),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    Icons.replay,
+                    color: Colors.white,
+                    size: 16,
+                  ),
+                  SizedBox(width: 4),
+                  Text(
+                    "Return",
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 12,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      );
+    }
+    
+    // Return your existing Card for correct ayahs...
     return Card(
       elevation: 2, // Reduced elevation
       margin: EdgeInsets.symmetric(vertical: 4), // Tighter margins
@@ -1423,6 +1704,9 @@ const SizedBox(height: 12),
     
     // Move to next ayah if possible
     if (_currentRecitingIndex < _endIndex) {
+      // Show navigation feedback
+      _showNavigationFeedback("Moving to Ayah ${widget.ayahs[_currentRecitingIndex + 1]['ayahNumber']}");
+      
       setState(() {
         _currentRecitingIndex++;
         _isTextVisible = false; // Don't show text initially for new ayahs
@@ -1544,15 +1828,21 @@ const SizedBox(height: 12),
               // If incorrect and we've already moved past this ayah, 
               // we need to go back to this ayah with clear feedback
               if (_currentRecitingIndex > ayahIndex) {
+                // Show error navigation feedback with animation
+                _showNavigationFeedback(
+                  "Returning to Ayah ${ayah['ayahNumber']} - Please recite again", 
+                  isError: true
+                );
+                
                 setState(() {
                   _currentRecitingIndex = ayahIndex;
                   _isTextVisible = true; // Show the text to help them correct
                   _errorMessageVisible = true; // Show an error message
-                  _errorFeedback = "Please recite this ayah again correctly.";
+                  _errorFeedback = "Your recitation needs improvement. Please try again.";
                 });
                 
-                // Add a short delay before starting recording again to let the user see the message
-                Future.delayed(Duration(seconds: 2), () {
+                // Add a short delay before starting recording again
+                Future.delayed(Duration(seconds: 3), () {
                   if (mounted) {
                     _startRecordingForFlow(ayah);
                     
@@ -1582,6 +1872,24 @@ const SizedBox(height: 12),
           _isProcessing = false;
         });
       }
+    });
+  }
+
+  // Add this method to show navigation feedback
+  void _showNavigationFeedback(String message, {bool isError = false}) {
+    setState(() {
+      _isAnimating = true;
+      _navigationMessage = message;
+    });
+    
+    _animationController.forward(from: 0.0).then((_) {
+      Timer(Duration(seconds: 2), () {
+        if (mounted) {
+          setState(() {
+            _isAnimating = false;
+          });
+        }
+      });
     });
   }
 }

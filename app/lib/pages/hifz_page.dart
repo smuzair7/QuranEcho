@@ -35,8 +35,8 @@ class _HifzPageState extends State<HifzPage> {
   String _recordingStatus = 'Tap to start recording';
 
   // API variables
-  static const String _apiToken = "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";
-  static const String _apiUrl = "https://api-inference.huggingface.co/models/tarteel-ai/whisper-base-ar-quran";
+  static const String _apiToken = "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";
+  static const String _apiUrl = "https://router.huggingface.co/hf-inference/models/tarteel-ai/whisper-base-ar-quran";
   bool _isProcessing = false;
   String? _apiResult;
   List<String> _transcriptions = [];

@@ -92,17 +92,19 @@ class HomePage extends StatelessWidget {
 
               // Logo and App Name
               CircleAvatar(
-                radius: 50, // Reduced size from 60 to 50
+                radius: 50,
                 backgroundColor: Colors.white.withOpacity(0.9),
-                child: Padding(
-                  padding: const EdgeInsets.all(
-                      10.0), // Reduced padding from 12 to 10
+                child: ClipOval(
                   child: Image.asset(
-                    'assets/images/quran_logo.png',
+                    'assets/images/quran-echo-logo.png',
+                    width: 90, // Slightly smaller than diameter (100)
+                    height: 90,
+                    fit: BoxFit.cover, // This will crop the image to fit the circle
                     errorBuilder: (context, error, stackTrace) => const Icon(
-                        Icons.menu_book,
-                        size: 50,
-                        color: Color(0xFF1F8A70)), // Reduced size from 60 to 50
+                      Icons.menu_book,
+                      size: 50,
+                      color: Color(0xFF1F8A70),
+                    ),
                   ),
                 ),
               ),

@@ -49,7 +49,7 @@ id_to_harf = {
 harf_to_id = {harf: idx for idx, harf in id_to_harf.items()}
 
 # Path to the TFLite model
-MODEL_PATH = os.path.join(os.path.dirname(__file__), 'model', 'makharij_model.tflite')
+MODEL_PATH = os.path.join(os.path.dirname(__file__), 'model', 'fine_tuned_model_float32.tflite')
 
 # Load TFLite model
 interpreter = None
@@ -218,6 +218,66 @@ def analyze_harf():
         return jsonify({'error': f'Server error: {str(e)}'}), 500
 
 
+@app.route('/transcribe', methods=['POST'])
+def transcribe():
+    print("Received transcription request")
+    
+    if 'audio' not in request.files:
+        print("Error: No audio file in request")
+        return jsonify({'error': 'No audio file provided'}), 400
+        
+    audio_file = request.files['audio']
+    print(f"Received audio file: {audio_file.filename}, content type: {audio_file.content_type}")
+    
+    temp_path = os.path.join(tempfile.gettempdir(), secure_filename(audio_file.filename))
+    audio_file.save(temp_path)
+    print(f"Saved audio to temporary path: {temp_path}")
+    
+    try:
+        # Use Hugging Face Hub for inference - UPDATED TO MATCH THEIR EXAMPLE
+        from huggingface_hub import InferenceClient
+        
+        print("Creating InferenceClient...")
+        client = InferenceClient(
+            provider="hf-inference",  # Add this
+            api_key="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"  # Changed from token to api_key
+        )
+        
+        print(f"Sending audio to Hugging Face API...")
+        # Pass model here instead
+        result = client.automatic_speech_recognition(
+            temp_path, 
+            model="tarteel-ai/whisper-base-ar-quran"
+        )
+        print(f"Received result from HF API: {result}")
+        
+        os.remove(temp_path)
+        print("Temporary file removed")
+        
+        # Handle different response formats
+        if isinstance(result, dict) and 'text' in result:
+            text = result['text']
+        elif isinstance(result, str):
+            text = result
+        else:
+            text = str(result)
+            
+        print(f"Returning transcription: {text}")
+        return jsonify({'text': text})
+    except Exception as e:
+        print(f"Error in transcription: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        
+        # Check if file exists and remove
+        if os.path.exists(temp_path):
+            os.remove(temp_path)
+            
+        return jsonify({
+            'error': str(e),
+            'traceback': traceback.format_exc()
+        }), 500
+    
 # Add to your existing Flask server in server/app.py
 
 @app.route('/compare_recitation', methods=['POST'])
@@ -302,7 +362,110 @@ def debug_info():
     }
     return jsonify(debug_data)
 
+# Add these imports to your app.py
+import torch
+from transformers import pipeline, AutoProcessor, AutoModelForSpeechSeq2Seq
+import os
+import tempfile
+from werkzeug.utils import secure_filename
+import time
+
+# Global variable to store the loaded model (outside any route)
+asr_pipeline = None
+
+def load_local_model():
+    """Load the model if it's not already loaded"""
+    global asr_pipeline
+    
+    if asr_pipeline is None:
+        print("Loading Tarteel Whisper model...")
+        start_time = time.time()
+        
+        processor = AutoProcessor.from_pretrained("tarteel-ai/whisper-base-ar-quran")
+        model = AutoModelForSpeechSeq2Seq.from_pretrained("tarteel-ai/whisper-base-ar-quran")
+        
+        # Create pipeline
+        asr_pipeline = pipeline(
+            "automatic-speech-recognition",
+            model=model,
+            tokenizer=processor.tokenizer,
+            feature_extractor=processor.feature_extractor,
+            max_new_tokens=128,
+            chunk_length_s=30,
+            batch_size=16,
+            return_timestamps=False,
+            device="cuda" if torch.cuda.is_available() else "cpu"
+        )
+        
+        print(f"Model loaded in {time.time() - start_time:.2f} seconds")
+    
+    return asr_pipeline
+
+# Add this route to your Flask app
+@app.route('/transcribe_local', methods=['POST'])
+def transcribe_local():
+    print("Received transcription request for local model")
+    
+    if 'audio' not in request.files:
+        print("Error: No audio file in request")
+        return jsonify({'error': 'No audio file provided'}), 400
+        
+    audio_file = request.files['audio']
+    print(f"Received audio file: {audio_file.filename}, content type: {audio_file.content_type}")
+    
+    temp_path = os.path.join(tempfile.gettempdir(), secure_filename(audio_file.filename))
+    audio_file.save(temp_path)
+    print(f"Saved audio to temporary path: {temp_path}")
+    
+    try:
+        # Load the model if not already loaded
+        pipe = load_local_model()
+        
+        # Process audio
+        print("Transcribing audio...")
+        start_time = time.time()
+        result = pipe(temp_path)
+        print(f"Transcription completed in {time.time() - start_time:.2f} seconds")
+        
+        # Clean up
+        os.remove(temp_path)
+        print("Temporary file removed")
+        
+        # Extract text from result
+        if isinstance(result, dict) and 'text' in result:
+            text = result['text']
+        else:
+            text = str(result)
+            
+        print(f"Transcription result: {text}")
+        return jsonify({'text': text})
+        
+    except Exception as e:
+        print(f"Error in transcription: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        
+        # Cleanup
+        if os.path.exists(temp_path):
+            os.remove(temp_path)
+            
+        return jsonify({
+            'error': str(e),
+            'traceback': traceback.format_exc()
+        }), 500
+
+
+def load_audio_with_librosa(audio_path, sampling_rate=16000):
+    """Load audio using librosa instead of ffmpeg"""
+    waveform, sr = librosa.load(audio_path, sr=sampling_rate, mono=True)
+    return {"array": waveform, "sampling_rate": sr}
+
+
+
 if __name__ == '__main__':
     # Changed host to 0.0.0.0 to allow connections from any IP
     # Increased timeout for large audio files
+    #print("Pre-loading the model...")
+    #load_local_model()
+    
     app.run(host='0.0.0.0', port=5000, debug=True, threaded=True)
