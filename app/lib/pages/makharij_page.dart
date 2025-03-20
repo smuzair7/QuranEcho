@@ -8,6 +8,7 @@ import 'package:just_audio/just_audio.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as path;
 import 'package:http/http.dart' as http;
+import 'dart:math' as math;
 
 // Add this class at the top level (not inside any other class)
 class TarteelVerificationResult {
@@ -120,8 +121,14 @@ final Map<String, List<String>> _letterToTranscriptionPatterns = {
   bool _isPlayingReference = false;
   final _referencePlayer = AudioPlayer(); // Separate player for reference audio
 
+  // Add these state variables
+  bool _isAnimating = false;
+  List<double> _audioLevels = List.generate(30, (_) => 0.1);
+  Timer? _animationTimer;
+
   @override
   void dispose() {
+    _animationTimer?.cancel();
     _audioRecorder.dispose();
     _audioPlayer.dispose();
     _referencePlayer.dispose(); // Dispose the reference player too
@@ -167,6 +174,8 @@ final Map<String, List<String>> _letterToTranscriptionPatterns = {
         _recordingStatus = 'Recording in progress...';
         _recordingPath = filePath;
       });
+
+      _startAudioVisualization();
     } catch (e) {
       setState(() {
         _recordingStatus = 'Recording error: ${e.toString()}';
@@ -423,6 +432,11 @@ final Map<String, List<String>> _letterToTranscriptionPatterns = {
 
       // Show a more user-friendly error dialog
       _showConnectionErrorDialog();
+    }
+
+    if (_analysisResult!.containsKey('assessment') &&
+        (_analysisResult!['assessment'] == 'Excellent' || _analysisResult!['assessment'] == 'Perfect')) {
+      _showSuccessAnimation();
     }
   }
 
@@ -1028,6 +1042,197 @@ Future<TarteelVerificationResult> _verifyWithTarteelAPI() async {
     }
   }
 
+  // Add this method to start the audio visualization
+  void _startAudioVisualization() {
+    _isAnimating = true;
+    _animationTimer?.cancel();
+    _animationTimer = Timer.periodic(const Duration(milliseconds: 100), (_) {
+      if (mounted) {
+        setState(() {
+          for (int i = 0; i < _audioLevels.length; i++) {
+            if (_isRecording || _isPlaying || _isPlayingReference) {
+              _audioLevels[i] = math.min(1.0, 0.1 + math.Random().nextDouble() * 0.7);
+            } else {
+              _audioLevels[i] = math.max(0.1, _audioLevels[i] * 0.85);
+            }
+          }
+        });
+      }
+    });
+  }
+
+  // Add this widget for audio visualization
+  Widget _buildAudioVisualization() {
+    return Container(
+      height: 80,
+      width: double.infinity,
+      decoration: BoxDecoration(
+        color: Colors.black.withOpacity(0.05),
+        borderRadius: BorderRadius.circular(20),
+      ),
+      padding: const EdgeInsets.all(10),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+        children: List.generate(
+          _audioLevels.length,
+          (index) => AnimatedContainer(
+            duration: const Duration(milliseconds: 50),
+            width: 4,
+            height: _audioLevels[index] * 60,
+            decoration: BoxDecoration(
+              color: _isRecording
+                  ? Colors.red.withOpacity(0.7)
+                  : _isPlayingReference
+                      ? Colors.orange.withOpacity(0.7)
+                      : Colors.green.withOpacity(0.7),
+              borderRadius: BorderRadius.circular(5),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  // Add this method for success animation
+  void _showSuccessAnimation() {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => Dialog(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        child: Container(
+          height: 300,
+          child: Center(
+            child: TweenAnimationBuilder(
+              tween: Tween<double>(begin: 0, end: 1),
+              duration: const Duration(milliseconds: 1500),
+              builder: (context, double value, child) {
+                return Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Transform.scale(
+                      scale: value,
+                      child: Container(
+                        width: 120,
+                        height: 120,
+                        decoration: const BoxDecoration(color: Color(0xFF1F8A70), shape: BoxShape.circle),
+                        child: const Icon(Icons.check, color: Colors.white, size: 80),
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                    Opacity(
+                      opacity: value,
+                      child: const Text('Excellent!', style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: Colors.white)),
+                    ),
+                  ],
+                );
+              },
+              onEnd: () {
+                Future.delayed(const Duration(milliseconds: 500), () {
+                  Navigator.of(context).pop();
+                });
+              },
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+
+  // Enhance the audio playback button
+  Widget _buildEnhancedAudioButton() {
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 300),
+      width: double.infinity,
+      height: 70,
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: _isPlayingReference
+              ? [Colors.orange.shade400, Colors.orange.shade700]
+              : [const Color(0xFF00A896), const Color(0xFF1F8A70)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: _isPlayingReference
+                ? Colors.orange.withOpacity(0.4)
+                : const Color(0xFF1F8A70).withOpacity(0.4),
+            blurRadius: 8,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: _isRecording || _isProcessing ? null : _playReferenceAudio,
+          borderRadius: BorderRadius.circular(16),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  _isPlayingReference ? Icons.stop_circle : Icons.play_circle_fill,
+                  color: Colors.white,
+                  size: 32,
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        _isPlayingReference ? 'Stop Audio' : 'Listen to Pronunciation',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                        ),
+                      ),
+                      Text(
+                        _isPlayingReference ? 'Playing...' : 'Tap to hear correct pronunciation',
+                        style: TextStyle(
+                          color: Colors.white.withOpacity(0.8),
+                          fontSize: 12,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                if (_isPlayingReference)
+                  Container(
+                    width: 40,
+                    height: 40,
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.2),
+                      shape: BoxShape.circle,
+                    ),
+                    child: Center(
+                      child: SizedBox(
+                        width: 24,
+                        height: 24,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                        ),
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  // Modified build method to fix overflow and improve layout
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -1039,258 +1244,479 @@ Future<TarteelVerificationResult> _verifyWithTarteelAPI() async {
         foregroundColor: Colors.white,
         elevation: 0,
       ),
-      body: Container(
-        width: double.infinity,
-        padding: const EdgeInsets.all(20),
-        child: SingleChildScrollView(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              // Display selected letter if available
-              if (widget.letter != null)
-                Container(
-                  width: 120,
-                  height: 120,
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF1F8A70).withOpacity(0.1),
-                    shape: BoxShape.circle,
-                  ),
-                  child: Center(
-                    child: Text(
-                      widget.letter!,
-                      style: const TextStyle(
-                        fontSize: 70,
-                        fontWeight: FontWeight.bold,
-                        fontFamily: 'Scheherazade',
+      body: SafeArea(  // Add SafeArea to prevent overflow with system UI
+        child: Container(
+          width: double.infinity,
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),  // Reduce vertical padding
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                // Display selected letter if available
+                if (widget.letter != null)
+                  Container(
+                    width: 100,  // Reduce size slightly
+                    height: 100,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF1F8A70).withOpacity(0.1),
+                      shape: BoxShape.circle,
+                    ),
+                    child: Center(
+                      child: Text(
+                        widget.letter!,
+                        style: const TextStyle(
+                          fontSize: 60,  // Reduce font size
+                          fontWeight: FontWeight.bold,
+                          fontFamily: 'Scheherazade',
+                        ),
                       ),
                     ),
+                  )
+                else
+                  Icon(
+                    Icons.record_voice_over,
+                    size: 80,
+                    color: Theme.of(context).colorScheme.primary,
                   ),
-                )
-              else
-                Icon(
-                  Icons.record_voice_over,
-                  size: 80,
-                  color: Theme.of(context).colorScheme.primary,
-                ),
 
-              const SizedBox(height: 20),
+                const SizedBox(height: 12),  // Reduced spacing
 
-              Text(
-                widget.letter != null ? 'Practice Pronouncing' : 'Makharij',
-                style: TextStyle(
-                  fontSize: 32,
-                  fontWeight: FontWeight.bold,
-                  color: Theme.of(context).colorScheme.onSurface,
-                ),
-              ),
-
-              const SizedBox(height: 16),
-
-              Text(
-                widget.letter != null
-                    ? 'Record yourself pronouncing this letter correctly'
-                    : 'Learn proper pronunciation points of Arabic letters',
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: 16,
-                  color:
-                      Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
-                ),
-              ),
-
-              const SizedBox(height: 40),
-
-              // Add this after your letter display container
-              if (widget.letter != null) ...[
-                const SizedBox(height: 20),
-                
-                // Reference audio button
-                ElevatedButton.icon(
-                  onPressed: _isRecording || _isProcessing 
-                      ? null 
-                      : _playReferenceAudio,
-                  icon: Icon(
-                    _isPlayingReference 
-                        ? Icons.stop 
-                        : Icons.volume_up,
-                    color: Colors.white,
-                  ),
-                  label: Text(
-                    _isPlayingReference 
-                        ? 'Stop' 
-                        : 'Listen to Correct Pronunciation',
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: _isPlayingReference 
-                        ? Colors.orange 
-                        : const Color(0xFF00A896),
-                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(24),
-                    ),
+                Text(
+                  widget.letter != null ? 'Practice Pronouncing' : 'Makharij',
+                  style: TextStyle(
+                    fontSize: 28,  // Slightly smaller
+                    fontWeight: FontWeight.bold,
+                    color: Theme.of(context).colorScheme.onSurface,
                   ),
                 ),
-              ],
 
-              // Recording status text
-              Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                decoration: BoxDecoration(
-                  color: _isRecording
-                      ? Colors.red.withOpacity(0.1)
-                      : Colors.grey.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(20),
+                const SizedBox(height: 8),  // Reduced spacing
+
+                Text(
+                  widget.letter != null
+                      ? 'Record yourself pronouncing this letter correctly'
+                      : 'Learn proper pronunciation points of Arabic letters',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 14,  // Reduced font size
+                    color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+                  ),
                 ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(
-                      _isRecording ? Icons.mic : Icons.info_outline,
-                      color: _isRecording ? Colors.red : Colors.grey[700],
-                      size: 18,
-                    ),
-                    const SizedBox(width: 8),
-                    Text(
-                      _recordingStatus,
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w500,
-                        color: _isRecording ? Colors.red : Colors.grey[800],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
 
-              const SizedBox(height: 30),
+                // Add enhanced pronunciation guide if a letter is selected
+                if (widget.letter != null) _buildPronunciationGuide(),
 
-              // Recording controls
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  // Record button
-                  ElevatedButton(
-                    onPressed: _isPlaying || _isProcessing
-                        ? null
-                        : (_isRecording ? _stopRecording : _startRecording),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor:
-                          _isRecording ? Colors.red : const Color(0xFF1F8A70),
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.all(16),
-                      shape: const CircleBorder(),
-                      elevation: 4,
-                    ),
-                    child: Icon(
-                      _isRecording ? Icons.stop : Icons.mic,
-                      size: 36,
-                    ),
-                  ),
-
-                  const SizedBox(width: 20),
-
-                  // Play button (only enabled if recording exists)
-                  ElevatedButton(
-                    onPressed: (_recordingPath != null &&
-                            !_isRecording &&
-                            !_isProcessing)
-                        ? (_isPlaying ? _stopPlayback : _playRecording)
-                        : null,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor:
-                          _isPlaying ? Colors.orange : const Color(0xFF00A896),
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.all(16),
-                      shape: const CircleBorder(),
-                      elevation: 4,
-                    ),
-                    child: Icon(
-                      _isPlaying ? Icons.stop : Icons.play_arrow,
-                      size: 36,
-                    ),
-                  ),
-
-                  const SizedBox(width: 20),
-
-                  // Analyze button
-                  ElevatedButton(
-                    onPressed: (_recordingPath != null &&
-                            !_isRecording &&
-                            !_isPlaying &&
-                            !_isProcessing)
-                        ? _analyzeRecording
-                        : null,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF00A896),
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.all(16),
-                      shape: const CircleBorder(),
-                      elevation: 4,
-                    ),
-                    child: _isProcessing
-                        ? const SizedBox(
-                            width: 24,
-                            height: 24,
-                            child: CircularProgressIndicator(
-                              color: Colors.white,
-                              strokeWidth: 3,
-                            ),
-                          )
-                        : const Icon(
-                            Icons.analytics_outlined,
-                            size: 36,
-                          ),
-                  ),
+                // Add enhanced audio button if a letter is selected
+                if (widget.letter != null) ...[
+                  const SizedBox(height: 12),  // Reduced spacing
+                  _buildEnhancedAudioButton(),
                 ],
-              ),
 
-              // Analysis results
-              if (_analysisResult != null) ...[
-                const SizedBox(height: 40),
-                _buildAnalysisResultCard(),
-              ],
+                const SizedBox(height: 16),  // Reduced spacing
+                
+                // Audio visualization
+                if (_isRecording || _isPlaying || _isPlayingReference) 
+                  _buildAudioVisualization(),
+                
+                const SizedBox(height: 12),  // Reduced spacing
 
-              if (_recordingPath != null &&
-                  _analysisResult == null &&
-                  !_isProcessing) ...[
-                const SizedBox(height: 30),
+                // Recording status text
                 Container(
-                  padding: const EdgeInsets.all(12),
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),  // Reduced padding
                   decoration: BoxDecoration(
-                    color: Colors.blue.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(8),
+                    color: _isRecording
+                        ? Colors.red.withOpacity(0.1)
+                        : Colors.grey.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(20),
                   ),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      const Icon(
-                        Icons.info_outline,
-                        color: Colors.blue,
-                        size: 20,
+                      Icon(
+                        _isRecording ? Icons.mic : Icons.info_outline,
+                        color: _isRecording ? Colors.red : Colors.grey[700],
+                        size: 16,  // Reduced size
                       ),
                       const SizedBox(width: 8),
-                      Flexible(
-                        child: Text(
-                          'Recording ready. Press analyze to check pronunciation',
-                          style: TextStyle(
-                            fontSize: 14,
-                            color: Colors.blue[800],
-                          ),
+                      Text(
+                        _recordingStatus,
+                        style: TextStyle(
+                          fontSize: 13,  // Reduced font size
+                          fontWeight: FontWeight.w500,
+                          color: _isRecording ? Colors.red : Colors.grey[800],
                         ),
                       ),
                     ],
                   ),
                 ),
+
+                const SizedBox(height: 16),
+
+                // Recording controls - improve the layout and fix recording issues
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    // Record button - fixed to ensure it works properly
+                    ElevatedButton(
+                      onPressed: _isPlaying || _isProcessing
+                          ? null
+                          : (_isRecording ? _stopRecording : () {
+                              // Request permission first before recording
+                              _checkPermissionAndStartRecording();
+                            }),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor:
+                            _isRecording ? Colors.red : const Color(0xFF1F8A70),
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.all(16),
+                        shape: const CircleBorder(),
+                        elevation: 4,
+                      ),
+                      child: Icon(
+                        _isRecording ? Icons.stop : Icons.mic,
+                        size: 36,
+                      ),
+                    ),
+
+                    const SizedBox(width: 20),
+
+                    // Play button
+                    ElevatedButton(
+                      onPressed: (_recordingPath != null &&
+                              !_isRecording &&
+                              !_isProcessing)
+                          ? (_isPlaying ? _stopPlayback : _playRecording)
+                          : null,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor:
+                            _isPlaying ? Colors.orange : const Color(0xFF00A896),
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.all(16),
+                        shape: const CircleBorder(),
+                        elevation: 4,
+                      ),
+                      child: Icon(
+                        _isPlaying ? Icons.stop : Icons.play_arrow,
+                        size: 36,
+                      ),
+                    ),
+
+                    const SizedBox(width: 20),
+
+                    // Analyze button
+                    ElevatedButton(
+                      onPressed: (_recordingPath != null &&
+                              !_isRecording &&
+                              !_isPlaying &&
+                              !_isProcessing)
+                          ? _analyzeRecording
+                          : null,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF00A896),
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.all(16),
+                        shape: const CircleBorder(),
+                        elevation: 4,
+                      ),
+                      child: _isProcessing
+                          ? const SizedBox(
+                              width: 24,
+                              height: 24,
+                              child: CircularProgressIndicator(
+                                color: Colors.white,
+                                strokeWidth: 3,
+                              ),
+                            )
+                          : const Icon(
+                              Icons.analytics_outlined,
+                              size: 36,
+                            ),
+                    ),
+                  ],
+                ),
+
+                // Analysis results
+                if (_analysisResult != null) ...[
+                  const SizedBox(height: 20),
+                  _buildAnalysisResultCard(),
+                ],
+
+                if (_recordingPath != null &&
+                    _analysisResult == null &&
+                    !_isProcessing) ...[
+                  const SizedBox(height: 20),
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.blue.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(
+                          Icons.info_outline,
+                          color: Colors.blue,
+                          size: 20,
+                        ),
+                        const SizedBox(width: 8),
+                        Flexible(
+                          child: Text(
+                            'Recording ready. Press analyze to check pronunciation',
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: Colors.blue[800],
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+
+                // Practice tips - made more compact
+                if (widget.letter != null) ...[
+                  const SizedBox(height: 20),
+                  SizedBox(
+                    height: 130,  // Reduced height
+                    child: PageView(
+                      children: [
+                        _buildTipCard(
+                          icon: Icons.record_voice_over, 
+                          title: 'Clear Articulation', 
+                          description: 'Focus on the exact point of articulation described above.', 
+                          color: Colors.blue
+                        ),
+                        _buildTipCard(
+                          icon: Icons.mic, 
+                          title: 'Proper Volume', 
+                          description: 'Speak clearly but naturally. Not too loud or soft.', 
+                          color: Colors.purple
+                        ),
+                        _buildTipCard(
+                          icon: Icons.speed, 
+                          title: 'Correct Duration', 
+                          description: 'Hold the sound for its proper duration.', 
+                          color: Colors.orange
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+                // Add bottom spacing to prevent overflow
+                const SizedBox(height: 12),
               ],
-            ],
+            ),
           ),
         ),
+      ),
+    );
+  }
+
+  // Add this new method to properly check for permissions before recording
+  Future<void> _checkPermissionAndStartRecording() async {
+    final hasPermission = await _audioRecorder.hasPermission();
+    
+    if (!hasPermission) {
+      // Show permission denied dialog with instructions
+      showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Microphone Permission Required'),
+          content: const Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                Icons.mic_off,
+                color: Colors.red,
+                size: 50,
+              ),
+              SizedBox(height: 16),
+              Text(
+                'This app needs microphone permission to record your pronunciation.',
+                style: TextStyle(fontSize: 16),
+              ),
+              SizedBox(height: 8),
+              Text(
+                'Please go to Settings > Apps > QuranEcho > Permissions and grant microphone access.',
+                style: TextStyle(fontSize: 14),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('OK'),
+            ),
+          ],
+        ),
+      );
+      setState(() {
+        _recordingStatus = 'Permission denied for recording';
+      });
+      return;
+    }
+    
+    // If we have permission, start recording
+    _startRecording();
+  }
+
+  // Modify _buildTipCard for better space efficiency
+  Widget _buildTipCard({required IconData icon, required String title, required String description, required Color color}) {
+    return Card(
+      elevation: 4,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      child: Padding(
+        padding: const EdgeInsets.all(12.0),  // Reduced padding
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(6),  // Reduced padding
+                  decoration: BoxDecoration(color: color.withOpacity(0.2), shape: BoxShape.circle),
+                  child: Icon(icon, color: color, size: 20),  // Smaller icon
+                ),
+                const SizedBox(width: 8),
+                Text(title, style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: color)),  // Smaller font
+              ],
+            ),
+            const SizedBox(height: 8),  // Reduced spacing
+            Text(
+              description, 
+              style: const TextStyle(fontSize: 13),  // Smaller font
+              maxLines: 3,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // Modify _buildPronunciationGuide for better space efficiency
+  Widget _buildPronunciationGuide() {
+    if (widget.letter == null) return const SizedBox.shrink();
+
+    // Map letters to their articulation points and instructions
+    final Map<String, Map<String, String>> letterGuides = {
+      'ا': {'point': 'Throat (Bottom)', 'instruction': 'Open your throat and mouth widely to produce this sound.'},
+      'ه': {'point': 'Throat (Middle)', 'instruction': 'Exhale gently from the middle of your throat.'},
+      'ع': {'point': 'Throat (Middle)', 'instruction': 'Constrict the middle of your throat slightly.'},
+      'ح': {'point': 'Throat (Top)', 'instruction': 'Produce a gentle friction from the top of your throat.'},
+      'غ': {'point': 'Throat (Top)', 'instruction': 'Create a gargling sound from the top of your throat.'},
+      'خ': {'point': 'Throat (Top)', 'instruction': 'Create friction with the back of your tongue against the soft palate.'},
+      'ق': {'point': 'Tongue (Back)', 'instruction': 'Press the back of your tongue against the roof of your mouth.'},
+      'ك': {'point': 'Tongue (Middle-Back)', 'instruction': 'Press the middle-back of your tongue against the roof of your mouth.'},
+      'ج': {'point': 'Tongue (Middle)', 'instruction': 'Press the middle of your tongue against the roof of your mouth.'},
+      'ش': {'point': 'Tongue (Middle)', 'instruction': 'Spread the middle of your tongue and create a hissing sound.'},
+      'ي': {'point': 'Tongue (Middle)', 'instruction': 'Raise the middle of your tongue toward the roof of your mouth.'},
+      'ل': {'point': 'Tongue (Side)', 'instruction': 'Touch the tip of your tongue to the roof of your mouth.'},
+      'ر': {'point': 'Tongue (Tip)', 'instruction': 'Vibrate the tip of your tongue near the front of the roof of your mouth.'},
+      'ن': {'point': 'Tongue (Tip)', 'instruction': 'Touch the tip of your tongue to the roof of your mouth and let air pass through your nose.'},
+      'ت': {'point': 'Tongue (Tip-Teeth)', 'instruction': 'Touch the tip of your tongue behind your upper front teeth.'},
+      'د': {'point': 'Tongue (Tip-Teeth)', 'instruction': 'Touch the tip of your tongue behind your upper front teeth with a stronger pressure.'},
+      'ط': {'point': 'Tongue (Tip-Teeth)', 'instruction': 'Press the tip of your tongue firmly behind your upper front teeth.'},
+      'ث': {'point': 'Tongue-Teeth', 'instruction': 'Place the tip of your tongue between your front teeth and blow air out gently.'},
+      'ذ': {'point': 'Tongue-Teeth', 'instruction': 'Place the tip of your tongue between your front teeth.'},
+      'ظ': {'point': 'Tongue-Teeth', 'instruction': 'Place the tip of your tongue between your front teeth with pressure.'},
+      'ص': {'point': 'Tongue-Teeth', 'instruction': 'Place the tip of your tongue near your lower front teeth and raise the back of your tongue.'},
+      'س': {'point': 'Tongue-Teeth', 'instruction': 'Place the tip of your tongue near your lower front teeth and create a hissing sound.'},
+      'ز': {'point': 'Tongue-Teeth', 'instruction': 'Place the tip of your tongue near your lower front teeth and create a buzzing sound.'},
+      'ف': {'point': 'Lip-Teeth', 'instruction': 'Place your upper teeth against your lower lip and blow air out.'},
+      'ب': {'point': 'Lips', 'instruction': 'Press your lips together and then separate them.'},
+      'م': {'point': 'Lips', 'instruction': 'Press your lips together and let air pass through your nose.'},
+      'و': {'point': 'Lips', 'instruction': 'Round your lips and create a sound from your throat.'},
+    };
+
+    final guide = letterGuides[widget.letter] ?? {'point': 'Unknown', 'instruction': 'Listen to the reference audio for correct pronunciation.'};
+    
+    return Container(
+      margin: const EdgeInsets.symmetric(vertical: 12),  // Reduced margin
+      padding: const EdgeInsets.all(12),  // Reduced padding
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 6,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.speaker_notes, color: const Color(0xFF1F8A70)),
+              const SizedBox(width: 8),
+              Text(
+                'How to Pronounce',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: const Color(0xFF1F8A70),
+                ),
+              ),
+            ],
+          ),
+          const Divider(height: 24),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Icon(Icons.location_on_outlined, color: Colors.grey[700], size: 20),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  'Articulation Point: ${guide['point']}',
+                  style: TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w500,
+                    color: Colors.grey[800],
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Icon(Icons.gesture, color: Colors.grey[700], size: 20),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  guide['instruction']!,
+                  style: TextStyle(
+                    fontSize: 15,
+                    color: Colors.grey[800],
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          Row(
+            children: [
+              Icon(Icons.lightbulb_outline, color: Colors.amber[700], size: 20),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  'Listen to the reference audio for the perfect pronunciation and try to mimic it.',
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontStyle: FontStyle.italic,
+                    color: Colors.amber[800],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }
