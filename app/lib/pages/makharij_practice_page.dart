@@ -40,6 +40,38 @@ class _MakharijLettersPageState extends State<MakharijLettersPage> {
     'ظ' // 27 - Zua
   ];
 
+    // Add a new list that defines the display order
+  final List<int> arabicAlphabetOrder = [
+    1,  // Alif (index 1 in your original list)
+    2,  // Ba (index 2)
+    21, // Ta (index 21)
+    17, // Sa/Tha (index 17)
+    9,  // Jeem (index 9)
+    8,  // Hha (index 8)
+    11, // Kha (index 11)
+    3,  // Dal (index 3)
+    26, // Zhal (index 26)
+    16, // Raa (index 16)
+    25, // Zaa (index 25)
+    19, // Seen (index 19)
+    20, // Sheen (index 20)
+    18, // Saud (index 18)
+    4,  // Duad (index 4)
+    22, // Tua (index 22)
+    27, // Zua (index 27)
+    0,  // Aain (index 0)
+    6,  // Ghain (index 6)
+    5,  // Faa (index 5)
+    15, // Qauf (index 15)
+    10, // Kaif (index 10)
+    12, // Laam (index 12)
+    13, // Meem (index 13)
+    14, // Noon (index 14)
+    7,  // Haa (index 7)
+    23, // Wao (index 23)
+    24  // Yaa (index 24)
+  ];
+
   int? selectedIndex;
 
   void selectLetter(int index) {
@@ -129,7 +161,39 @@ class MakharijPracticePage extends StatefulWidget {
 }
 
 class _MakharijPracticePageState extends State<MakharijPracticePage> {
-  // Updated letters list to match EXACTLY the order in app.py id_to_harf mapping
+  // Add this list to your class
+  final List<int> arabicAlphabetOrder = [
+    1,  // Alif (index 1)
+    2,  // Ba (index 2)
+    21, // Ta (index 21)
+    17, // Sa/Tha (index 17)
+    9,  // Jeem (index 9)
+    8,  // Hha (index 8)
+    11, // Kha (index 11)
+    3,  // Dal (index 3)
+    26, // Zhal (index 26)
+    16, // Raa (index 16)
+    25, // Zaa (index 25)
+    19, // Seen (index 19)
+    20, // Sheen (index 20)
+    18, // Saud (index 18)
+    4,  // Duad (index 4)
+    22, // Tua (index 22)
+    27, // Zua (index 27)
+    0,  // Aain (index 0)
+    6,  // Ghain (index 6)
+    5,  // Faa (index 5)
+    15, // Qauf (index 15)
+    10, // Kaif (index 10)
+    12, // Laam (index 12)
+    13, // Meem (index 13)
+    14, // Noon (index 14)
+    7,  // Haa (index 7)
+    23, // Wao (index 23)
+    24  // Yaa (index 24)
+  ];
+  
+  // Your existing code follows...
   final List<String> letters = [
     'ع', // 0 - Aain
     'ا', // 1 - Alif
@@ -231,15 +295,16 @@ class _MakharijPracticePageState extends State<MakharijPracticePage> {
                 textDirection: TextDirection.rtl,
                 child: GridView.builder(
                   gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount:
-                        4, // Changed to 4 letters per row for better layout
+                    crossAxisCount: 4,
                     childAspectRatio: 1.0,
                     crossAxisSpacing: 12,
                     mainAxisSpacing: 12,
                   ),
                   itemCount: letters.length,
                   itemBuilder: (context, index) {
-                    final isSelected = index == selectedIndex;
+                    // Use the mapped index to get the letter in correct Arabic order
+                    final mappedIndex = arabicAlphabetOrder[index];
+                    final isSelected = mappedIndex == selectedIndex;
                     return ElevatedButton(
                       style: ElevatedButton.styleFrom(
                         backgroundColor: isSelected
@@ -250,13 +315,12 @@ class _MakharijPracticePageState extends State<MakharijPracticePage> {
                           borderRadius: BorderRadius.circular(12),
                         ),
                         elevation: isSelected ? 4 : 2,
-                        padding: EdgeInsets
-                            .zero, // Remove padding to fit larger letters
+                        padding: EdgeInsets.zero,
                       ),
-                      onPressed: () => selectLetter(index),
+                      onPressed: () => selectLetter(mappedIndex), // Use the original index for selection
                       child: Center(
                         child: Text(
-                          letters[index],
+                          letters[mappedIndex], // Display the letter using the mapped index
                           style: const TextStyle(
                             fontSize: 32,
                             fontWeight: FontWeight.bold,

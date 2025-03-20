@@ -1726,6 +1726,84 @@ Widget _buildRecitationComparisonView() {
             ],
           ),
         ),
+        
+        // After the feedback section in _buildRecitationComparisonView()
+        if (_styleComparisonResult!.containsKey('word_comparisons')) ...[
+          const SizedBox(height: 30),
+          
+          Text(
+            'Word-by-Word Analysis',
+            style: TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+              color: const Color(0xFF00A896),
+            ),
+          ),
+          const SizedBox(height: 12),
+          
+          Container(
+            height: 200,
+            child: ListView.builder(
+              itemCount: (_styleComparisonResult!['word_comparisons'] as Map).length,
+              itemBuilder: (context, index) {
+                final word = (_styleComparisonResult!['word_comparisons'] as Map).keys.elementAt(index);
+                final details = (_styleComparisonResult!['word_comparisons'] as Map)[word];
+                final similarity = details['overall'] * 100;
+                
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 8),
+                  child: Row(
+                    children: [
+                      // Arabic word
+                      Text(
+                        word,
+                        style: TextStyle(
+                          fontSize: 22,
+                          fontFamily: 'Scheherazade',
+                        ),
+                        textDirection: TextDirection.rtl,
+                      ),
+                      const SizedBox(width: 10),
+                      
+                      // Similarity bar
+                      Expanded(
+                        child: Container(
+                          height: 24,
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(12),
+                            color: Colors.grey.shade200,
+                          ),
+                          child: Stack(
+                            children: [
+                              Container(
+                                width: similarity * 0.01 * MediaQuery.of(context).size.width * 0.5,
+                                decoration: BoxDecoration(
+                                  borderRadius: BorderRadius.circular(12),
+                                  color: _getScoreColor(similarity),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                      
+                      const SizedBox(width: 10),
+                      // Percentage
+                      Text(
+                        '${similarity.toStringAsFixed(0)}%',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: _getScoreColor(similarity),
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              },
+            ),
+          ),
+        ],
       ],
     ),
   );

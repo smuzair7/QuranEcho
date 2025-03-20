@@ -9,6 +9,14 @@ import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as path;
 import 'package:http/http.dart' as http;
 
+// Add this class at the top level (not inside any other class)
+class TarteelVerificationResult {
+  final bool isCorrect;
+  final double confidence;
+  
+  TarteelVerificationResult(this.isCorrect, this.confidence);
+}
+
 class MakharijPage extends StatefulWidget {
   final String? letter;
 
@@ -303,18 +311,18 @@ final Map<String, List<String>> _letterToTranscriptionPatterns = {
           print('Model detected incorrect pronunciation. Verifying with Tarteel API...');
           
           // Do a second check with Tarteel API
-          final bool isTarteelCorrect = await _verifyWithTarteelAPI();
+          final TarteelVerificationResult tarteelResult = await _verifyWithTarteelAPI();
           
-          if (isTarteelCorrect) {
+          if (tarteelResult.isCorrect) {
             // Tarteel API thinks it's correct, override the model result
-            print('Tarteel API verification succeeded. Overriding model result.');
+            print('Tarteel API verification succeeded with confidence: ${tarteelResult.confidence}%');
             
             // Create a positive result override
             final Map<String, dynamic> overrideResult = {
               'predicted': expectedHarf,
               'expected': expectedHarf,
-              'confidence': 85.0, // Use a moderate confidence value
-              'assessment': 'Good',
+              'confidence': tarteelResult.confidence, // Use the dynamic confidence value
+              'assessment': _getAssessmentFromConfidence(tarteelResult.confidence), // Add this helper method
               'feedback': 'Your pronunciation is good. Our verification system confirmed it.',
               'is_mismatch': false,
               'verification_method': 'Tarteel API backup',
@@ -396,77 +404,103 @@ final Map<String, List<String>> _letterToTranscriptionPatterns = {
     return _letterToTranscriptionPatterns.containsKey(letter);
   }
 
-  // New method to verify with Tarteel API
-  Future<bool> _verifyWithTarteelAPI() async {
-    try {
-      if (_recordingPath == null || widget.letter == null) return false;
-      
-      print('Verifying with Tarteel API...');
-      
-      final File audioFile = File(_recordingPath!);
-      final bytes = await audioFile.readAsBytes();
-      
-      // Send to Tarteel API
-      final response = await http.post(
-        Uri.parse(_tarteelApiUrl),
-        headers: {
-          "Authorization": "Bearer $_tarteelApiToken",
-          "Content-Type": "audio/wav",
-        },
-        body: bytes,
-      ).timeout(
-        const Duration(seconds: 15), // Add timeout
-        onTimeout: () => http.Response('{"error":"timeout"}', 408),
-      );
-      
-      if (response.statusCode == 200) {
-        final decodedResponse = jsonDecode(response.body);
-        String transcription = '';
-        
-        if (decodedResponse is Map && decodedResponse.containsKey('text')) {
-          transcription = decodedResponse['text'];
-        } else if (decodedResponse is List && decodedResponse.isNotEmpty && decodedResponse[0] is Map) {
-          transcription = decodedResponse[0]['generated_text'] ?? '';
-        } else {
-          transcription = decodedResponse.toString();
-        }
-        
-        // Fix Arabic encoding issues
-        transcription = _fixArabicEncoding(transcription);
-        
-        print('Tarteel API transcription: $transcription');
-        
-        // Check if transcription contains patterns for this letter
-        final patterns = _letterToTranscriptionPatterns[widget.letter!] ?? [];
-        
-        // Check if any pattern matches the expected letter
-        for (final pattern in patterns) {
-          if (transcription.contains(pattern)) {
-            print('Found matching pattern "$pattern" in transcription');
-            return true; // Tarteel thinks it's correct
-          }
-        }
-        
-        // If the expected letter appears directly in the transcription
-        if (transcription.contains(widget.letter!)) {
-          print('Found letter directly in transcription');
-          return true; // Tarteel thinks it's correct
-        }
-        
-        // Store what Tarteel detected for comparison
-        _tarteelDetectedLetter = _detectLetterFromTranscription(transcription);
-        print('Tarteel detected: $_tarteelDetectedLetter');
-        
-        return false; // Tarteel thinks it's incorrect
-      } else {
-        print('Tarteel API error: ${response.statusCode}');
-        return false;
-      }
-    } catch (e) {
-      print('Error verifying with Tarteel API: $e');
-      return false;
+
+
+// Update this method to return the verification result with confidence
+Future<TarteelVerificationResult> _verifyWithTarteelAPI() async {
+  try {
+    if (_recordingPath == null || widget.letter == null) {
+      return TarteelVerificationResult(false, 0.0);
     }
+    
+    print('Verifying with Tarteel API...');
+    
+    final File audioFile = File(_recordingPath!);
+    final bytes = await audioFile.readAsBytes();
+    
+    // Send to Tarteel API
+    final response = await http.post(
+      Uri.parse(_tarteelApiUrl),
+      headers: {
+        "Authorization": "Bearer $_tarteelApiToken",
+        "Content-Type": "audio/wav",
+      },
+      body: bytes,
+    ).timeout(
+      const Duration(seconds: 15), // Add timeout
+      onTimeout: () => http.Response('{"error":"timeout"}', 408),
+    );
+    
+    if (response.statusCode == 200) {
+      final decodedResponse = jsonDecode(response.body);
+      String transcription = '';
+      
+      if (decodedResponse is Map && decodedResponse.containsKey('text')) {
+        transcription = decodedResponse['text'];
+      } else if (decodedResponse is List && decodedResponse.isNotEmpty && decodedResponse[0] is Map) {
+        transcription = decodedResponse[0]['generated_text'] ?? '';
+      } else {
+        transcription = decodedResponse.toString();
+      }
+      
+      // Fix Arabic encoding issues
+      transcription = _fixArabicEncoding(transcription);
+      
+      print('Tarteel API transcription: $transcription');
+      
+      // Check for exact matches first - highest confidence
+      if (transcription.trim() == widget.letter) {
+        print('Exact letter match in transcription');
+        return TarteelVerificationResult(true, 95.0); // Excellent match
+      }
+      
+      // Check if transcription contains patterns for this letter
+      final patterns = _letterToTranscriptionPatterns[widget.letter!] ?? [];
+      
+      // Check for perfect matches with common patterns
+      for (final pattern in patterns.take(3)) { // First few patterns are most reliable
+        if (transcription.trim() == pattern) {
+          print('Found exact pattern match "$pattern" in transcription');
+          return TarteelVerificationResult(true, 90.0); // Very good match
+        }
+      }
+      
+      // Check for partial matches with main patterns
+      for (final pattern in patterns.take(3)) {
+        if (transcription.contains(pattern)) {
+          print('Found main pattern "$pattern" in transcription');
+          return TarteelVerificationResult(true, 85.0); // Good match
+        }
+      }
+      
+      // Check for partial matches with any pattern
+      for (final pattern in patterns) {
+        if (transcription.contains(pattern)) {
+          print('Found pattern "$pattern" in transcription');
+          return TarteelVerificationResult(true, 75.0); // Acceptable match
+        }
+      }
+      
+      // If the expected letter appears directly in the transcription
+      if (transcription.contains(widget.letter!)) {
+        print('Found letter in transcription');
+        return TarteelVerificationResult(true, 70.0); // Basic match
+      }
+      
+      // Store what Tarteel detected for comparison
+      _tarteelDetectedLetter = _detectLetterFromTranscription(transcription);
+      print('Tarteel detected: $_tarteelDetectedLetter');
+      
+      return TarteelVerificationResult(false, 0.0); // No match
+    } else {
+      print('Tarteel API error: ${response.statusCode}');
+      return TarteelVerificationResult(false, 0.0);
+    }
+  } catch (e) {
+    print('Error verifying with Tarteel API: $e');
+    return TarteelVerificationResult(false, 0.0);
   }
+}
 
   // Method to fix Arabic encoding (use your existing method)
   String _fixArabicEncoding(String text) {
@@ -586,6 +620,16 @@ final Map<String, List<String>> _letterToTranscriptionPatterns = {
       default:
         return Colors.grey;
     }
+  }
+
+  // Add this helper method
+  String _getAssessmentFromConfidence(double confidence) {
+    if (confidence >= 90) return 'Excellent';
+    if (confidence >= 80) return 'Very Good';
+    if (confidence >= 70) return 'Good';
+    if (confidence >= 60) return 'Fair';
+    if (confidence >= 50) return 'Needs Improvement';
+    return 'Poor';
   }
 
   Widget _buildAnalysisResultCard() {
