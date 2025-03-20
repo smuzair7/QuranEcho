@@ -7,6 +7,7 @@ import traceback
 from flask import Flask, request, jsonify
 from werkzeug.utils import secure_filename
 import warnings
+import json
 warnings.filterwarnings('ignore')
 
 app = Flask(__name__)
@@ -215,6 +216,60 @@ def analyze_harf():
         print(f"Unhandled exception in analyze_harf: {str(e)}")
         traceback.print_exc()
         return jsonify({'error': f'Server error: {str(e)}'}), 500
+
+
+# Add to your existing Flask server in server/app.py
+
+@app.route('/compare_recitation', methods=['POST'])
+def compare_recitation():
+    if 'user_audio' not in request.files or 'qari_audio' not in request.files:
+        return jsonify({'error': 'Both user and qari audio files are required'}), 400
+    
+    try:
+        # Get files
+        user_audio = request.files['user_audio']
+        qari_audio = request.files['qari_audio']
+        qari_name = request.form.get('qari_name', 'Sheikh Abdul Basit')
+        
+        # Save temporarily
+        temp_dir = tempfile.mkdtemp()
+        user_path = os.path.join(temp_dir, secure_filename(user_audio.filename))
+        qari_path = os.path.join(temp_dir, secure_filename(qari_audio.filename))
+        
+        user_audio.save(user_path)
+        qari_audio.save(qari_path)
+        
+        # Import the LehjaModule
+        from lehja_module import LehjaModule
+        
+        # Initialize the Lehja module
+        lehja = LehjaModule(model_path="tarteel-ai/whisper-base-ar-quran")
+        
+        # Create a profile for the Qari
+        profile = lehja.create_qari_profile(
+            qari_name=qari_name,
+            audio_paths=[qari_path],
+            save_path=None  # No need to save permanently
+        )
+        
+        # Compare the user's recitation
+        comparison_results = lehja.compare_recitation(
+            audio_path=user_path,
+            qari_name=qari_name
+        )
+        
+        # Clean up
+        os.remove(user_path)
+        os.remove(qari_path)
+        os.rmdir(temp_dir)
+        
+        return jsonify(comparison_results)
+        
+    except Exception as e:
+        print(f"Error in recitation comparison: {str(e)}")
+        traceback.print_exc()
+        return jsonify({'error': str(e)}), 500
+    
 
 @app.route('/health', methods=['GET'])
 def health_check():

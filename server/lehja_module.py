@@ -10,6 +10,9 @@ import scipy
 from scipy.spatial.distance import euclidean
 from fastdtw import fastdtw
 from dtaidistance import dtw
+# Add this at the top of lehja_module.py
+import matplotlib.pyplot as plt 
+
 
 class LehjaModule:
     def __init__(self, model_path="tarteel-ai/whisper-base-ar-quran", sample_rate=16000):
