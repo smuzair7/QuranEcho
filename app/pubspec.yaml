@@ -43,6 +43,7 @@ flutter:
     - assets/data/
     - assets/audio/reciters/abdul_basit/fatihah/
     - assets/images/quran-echo-logo.png
+    - assets/images/paperboard-texture.png
     - assets/audio/makharij/
   fonts:
     - family: Scheherazade

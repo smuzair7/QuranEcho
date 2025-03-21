@@ -465,7 +465,7 @@ def load_audio_with_librosa(audio_path, sampling_rate=16000):
 if __name__ == '__main__':
     # Changed host to 0.0.0.0 to allow connections from any IP
     # Increased timeout for large audio files
-    #print("Pre-loading the model...")
-    #load_local_model()
+    print("Pre-loading the model...")
+    load_local_model()
     
     app.run(host='0.0.0.0', port=5000, debug=True, threaded=True)
