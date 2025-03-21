@@ -38,8 +38,8 @@ class _HifzPageState extends State<HifzPage> {
   String _recordingStatus = 'Tap to start recording';
 
   // API variables
-  static const String _apiToken = "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";
-  static const String _apiUrl = "https://api-inference.huggingface.co/models/tarteel-ai/whisper-base-ar-quran";
+  static const String _apiToken = "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"; 
+  static const String _apiUrl = "https://router.huggingface.co/hf-inference/models/tarteel-ai/whisper-base-ar-quran";
   bool _isProcessing = false;
   String? _apiResult;
   List<String> _transcriptions = [];
@@ -388,9 +388,10 @@ class _HifzPageState extends State<HifzPage> {
       return;
     }
 
+    // Update the headers to match the expected format
     final headers = {
       "Authorization": "Bearer $_apiToken",
-      "Content-Type": "audio/wav",
+      "Content-Type": "audio/wav", // Keep as wav since we're recording wav files
     };
 
     const int maxRetries = 4;
@@ -408,15 +409,18 @@ class _HifzPageState extends State<HifzPage> {
           await Future.delayed(Duration(milliseconds: delayMs));
         }
 
+        // Send the raw audio bytes as the body (not JSON)
         final response = await http.post(
           Uri.parse(_apiUrl),
           headers: headers,
-          body: audioBytes,
+          body: audioBytes, // Send raw audio bytes
         );
 
         if (response.statusCode == 200) {
           final decodedResponse = jsonDecode(response.body);
           String text = '';
+          
+          // Updated response parsing to handle both formats
           if (decodedResponse is Map && decodedResponse.containsKey('text')) {
             text = decodedResponse['text'];
           } else if (decodedResponse is List && decodedResponse.isNotEmpty && decodedResponse[0] is Map) {

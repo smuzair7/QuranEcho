@@ -17,6 +17,11 @@ const userStatsSchema = new Schema({
     type: Number,
     default: 0
   },
+  // Change from Map to Object type
+  surahProgress: {
+    type: Object,
+    default: {},
+  },
   timeSpentMinutes: {
     type: Number,
     default: 0
@@ -29,7 +34,6 @@ const userStatsSchema = new Schema({
     type: Number,
     default: 0
   },
-  // Array of the last 7 days of memorization progress
   weeklyProgress: {
     type: [Number],
     default: [0, 0, 0, 0, 0, 0, 0]
@@ -38,7 +42,6 @@ const userStatsSchema = new Schema({
     type: Date,
     default: Date.now
   },
-  // Store the date of the last activity to calculate streaks
   lastActivityDate: {
     type: Date,
     default: Date.now

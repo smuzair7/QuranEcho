@@ -16,6 +16,13 @@ app.use(cors({
 }));
 app.use(express.json());
 
+// Add a more comprehensive logging middleware to debug request issues
+app.use((req, res, next) => {
+  console.log(`${new Date().toISOString()} - ${req.method} ${req.url}`);
+  console.log('Request body:', req.body);
+  next();
+});
+
 // MongoDB Atlas Connection String
 const MONGODB_URI = "mongodb+srv://QuranEcho:QuranEcho@db.mpffo.mongodb.net/fyp_app?retryWrites=true&w=majority";
 
@@ -190,146 +197,623 @@ app.get('/user-stats/:userId', async (req, res) => {
   }
 });
 
-// Update user stats
-app.put('/user-stats/:userId', async (req, res) => {
-  try {
-    const updates = req.body;
-    const userId = req.params.userId;
-    
-    console.log('Received update request with body:', JSON.stringify(updates));
-    
-    if (!isValidObjectId(userId)) {
-      return res.status(400).json({ 
-        message: 'Invalid user ID format. Must be a valid MongoDB ObjectId.'
-      });
+// Fix issue with endpoints by using more consistent routing patterns
+// Consider adding the route parameter explicitly to the handler function
+
+// Weekly progress - both methods in one handler for consistency
+app.route('/user-stats/:userId/weekly-progress')
+  .get(async (req, res) => {
+    try {
+      const userId = req.params.userId;
+      if (!isValidObjectId(userId)) {
+        return res.status(400).json({ message: 'Invalid user ID format' });
+      }
+      
+      const userStats = await UserStats.findOne({ userId });
+      if (!userStats) {
+        return res.status(404).json({ message: 'User stats not found' });
+      }
+      
+      res.json({ weeklyProgress: userStats.weeklyProgress || [0, 0, 0, 0, 0, 0, 0] });
+    } catch (error) {
+      console.error('Error getting weekly progress:', error);
+      res.status(500).json({ message: 'Server error getting weekly progress' });
     }
-    
-    // Build the aggregation pipeline for atomic updates
-    const pipeline = [];
-    
-    // Handle new memorized ayats with uniqueness check
-    if (updates.newMemorizedAyats && Array.isArray(updates.newMemorizedAyats)) {
-      pipeline.push({
-        $set: {
-          memorizedAyatsList: {
-            $setUnion: ["$memorizedAyatsList", updates.newMemorizedAyats]
-          }
-        }
-      }, {
-        $set: {
-          memorizedAyats: { $size: "$memorizedAyatsList" }
-        }
-      });
-    }
-    
-    // Handle new memorized surahs with uniqueness check
-    if (updates.newMemorizedSurahs && Array.isArray(updates.newMemorizedSurahs)) {
-      pipeline.push({
-        $set: {
-          memorizedSurahsList: {
-            $setUnion: ["$memorizedSurahsList", updates.newMemorizedSurahs]
-          }
-        }
-      }, {
-        $set: {
-          memorizedSurahs: { $size: "$memorizedSurahsList" }
-        }
-      });
-    }
-    
-    // Handle time addition
-    if (updates.timeSpentMinutes !== undefined) {
-      const additionalTime = parseInt(updates.timeSpentMinutes) || 0;
-      if (additionalTime > 0) {
-        pipeline.push({
-          $set: {
-            timeSpentMinutes: { $add: ["$timeSpentMinutes", additionalTime] }
-          }
+  })
+  .put(async (req, res) => {
+    try {
+      const { dayIndex, value } = req.body;
+      const userId = req.params.userId;
+  
+      if (!isValidObjectId(userId)) {
+        return res.status(400).json({ 
+          message: 'Invalid user ID format. Must be a valid MongoDB ObjectId.'
         });
       }
-    }
-    
-    // Add mandatory updates
-    pipeline.push({
-      $set: {
-        lastActivityDate: new Date(),
-        lastUpdated: new Date()
+  
+      if (dayIndex < 0 || dayIndex > 6) {
+        return res.status(400).json({ message: 'Day index must be between 0 and 6' });
       }
-    });
-    
-    // Execute atomic update
-    const updatedStats = await UserStats.findOneAndUpdate(
-      { userId },
-      pipeline,
-      { new: true, runValidators: true }
-    );
+  
+      // Use a simpler approach to update that doesn't rely on complex operators
+      // First retrieve the user stats
+      const userStats = await UserStats.findOne({ userId });
+      
+      if (!userStats) {
+        return res.status(404).json({ message: 'User stats not found' });
+      }
+      
+      // Ensure weeklyProgress is an array
+      if (!Array.isArray(userStats.weeklyProgress) || userStats.weeklyProgress.length !== 7) {
+        userStats.weeklyProgress = [0, 0, 0, 0, 0, 0, 0];
+      }
+      
+      // Update the specific day
+      userStats.weeklyProgress[dayIndex] = value;
+      userStats.lastUpdated = new Date();
+      userStats.lastActivityDate = new Date();
+      
+      // Save the changes
+      await userStats.save();
+  
+      res.json(userStats);
+    } catch (error) {
+      console.error('Error updating weekly progress:', error);
+      res.status(500).json({ message: 'Server error updating weekly progress' });
+    }
+  })
+  .post(async (req, res) => {
+    try {
+      const { dayIndex, value } = req.body;
+      const userId = req.params.userId;
+  
+      if (!isValidObjectId(userId)) {
+        return res.status(400).json({ 
+          message: 'Invalid user ID format. Must be a valid MongoDB ObjectId.'
+        });
+      }
+  
+      if (dayIndex < 0 || dayIndex > 6) {
+        return res.status(400).json({ message: 'Day index must be between 0 and 6' });
+      }
+  
+      const userStats = await UserStats.findOne({ userId });
+      
+      if (!userStats) {
+        return res.status(404).json({ message: 'User stats not found' });
+      }
+      
+      if (!Array.isArray(userStats.weeklyProgress) || userStats.weeklyProgress.length !== 7) {
+        userStats.weeklyProgress = [0, 0, 0, 0, 0, 0, 0];
+      }
+      
+      userStats.weeklyProgress[dayIndex] = value;
+      userStats.lastUpdated = new Date();
+      userStats.lastActivityDate = new Date();
+      
+      await userStats.save();
+  
+      res.json(userStats);
+    } catch (error) {
+      console.error('Error updating weekly progress:', error);
+      res.status(500).json({ message: 'Server error updating weekly progress' });
+    }
+  });
 
-    if (!updatedStats) {
-      return res.status(404).json({ message: 'User stats not found' });
+// Add Time - support both POST and PUT methods
+app.route('/user-stats/:userId/add-time')
+  .post(async (req, res) => {
+    try {
+      const { timeMinutes } = req.body;
+      const userId = req.params.userId;
+  
+      if (!isValidObjectId(userId)) {
+        return res.status(400).json({ 
+          message: 'Invalid user ID format. Must be a valid MongoDB ObjectId.'
+        });
+      }
+  
+      if (timeMinutes === undefined || typeof timeMinutes !== 'number' || timeMinutes <= 0) {
+        return res.status(400).json({ 
+          message: 'Time minutes must be a positive number'
+        });
+      }
+  
+      // Use findOne and save to avoid aggregation pipeline issues
+      const userStats = await UserStats.findOne({ userId });
+      
+      if (!userStats) {
+        return res.status(404).json({ message: 'User stats not found' });
+      }
+      
+      // Add time directly to the document
+      userStats.timeSpentMinutes += timeMinutes;
+      userStats.lastUpdated = new Date();
+      userStats.lastActivityDate = new Date();
+      
+      await userStats.save();
+  
+      res.json(userStats);
+    } catch (error) {
+      console.error('Error adding time to user stats:', error);
+      res.status(500).json({ message: 'Server error adding time to user stats' });
     }
-    
-    res.json({
-      ...updatedStats.toObject(),
-      memorizedAyats: updatedStats.memorizedAyatsList?.length || 0,
-      memorizedSurahs: updatedStats.memorizedSurahsList?.length || 0
-    });
-    
-  } catch (error) {
-    console.error('Error updating user stats:', error);
-    res.status(500).json({ message: 'Server error updating user stats', error: error.message });
-  }
-});
+  })
+  .put(async (req, res) => {
+    try {
+      const { timeMinutes } = req.body;
+      const userId = req.params.userId;
+  
+      if (!isValidObjectId(userId)) {
+        return res.status(400).json({ message: 'Invalid user ID format' });
+      }
+  
+      if (timeMinutes === undefined || typeof timeMinutes !== 'number' || timeMinutes <= 0) {
+        return res.status(400).json({ message: 'Time minutes must be a positive number' });
+      }
+  
+      const userStats = await UserStats.findOne({ userId });
+      if (!userStats) {
+        return res.status(404).json({ message: 'User stats not found' });
+      }
+      
+      userStats.timeSpentMinutes += timeMinutes;
+      userStats.lastUpdated = new Date();
+      userStats.lastActivityDate = new Date();
+      
+      await userStats.save();
+  
+      res.json(userStats);
+    } catch (error) {
+      console.error('Error adding time to user stats:', error);
+      res.status(500).json({ message: 'Server error adding time to user stats' });
+    }
+  });
 
-// Update weekly progress
-app.put('/user-stats/:userId/weekly-progress', async (req, res) => {
-  try {
-    const { dayIndex, value } = req.body;
-    const userId = req.params.userId;
-    
-    // Check if userId is a valid MongoDB ObjectId
-    if (!isValidObjectId(userId)) {
-      return res.status(400).json({ 
-        message: 'Invalid user ID format. Must be a valid MongoDB ObjectId.'
-      });
+// Memorized Ayats - consolidate route with route() method
+app.route('/user-stats/:userId/memorized-ayats')
+  .get(async (req, res) => {
+    try {
+      const userId = req.params.userId;
+      if (!isValidObjectId(userId)) {
+        return res.status(400).json({ message: 'Invalid user ID format' });
+      }
+      
+      const userStats = await UserStats.findOne({ userId });
+      if (!userStats) {
+        return res.status(404).json({ message: 'User stats not found' });
+      }
+      
+      res.json({ memorizedAyats: userStats.memorizedAyats });
+    } catch (error) {
+      console.error('Error getting memorized ayats:', error);
+      res.status(500).json({ message: 'Server error getting memorized ayats' });
     }
-    
-    if (dayIndex < 0 || dayIndex > 6) {
-      return res.status(400).json({ message: 'Day index must be between 0 and 6' });
+  })
+  .put(async (req, res) => {
+    try {
+      const { count } = req.body;
+      const userId = req.params.userId;
+  
+      if (!isValidObjectId(userId)) {
+        return res.status(400).json({ message: 'Invalid user ID format' });
+      }
+  
+      if (count === undefined || typeof count !== 'number' || count < 0) {
+        return res.status(400).json({ message: 'Count must be a non-negative number' });
+      }
+  
+      const userStats = await UserStats.findOne({ userId });
+      if (!userStats) {
+        return res.status(404).json({ message: 'User stats not found' });
+      }
+  
+      userStats.memorizedAyats = count;
+      userStats.lastUpdated = new Date();
+      userStats.lastActivityDate = new Date();
+      await userStats.save();
+  
+      res.json(userStats);
+    } catch (error) {
+      console.error('Error updating memorized Ayats:', error);
+      res.status(500).json({ message: 'Server error updating memorized Ayats' });
     }
-    
-    // Get the current weekly progress
-    const userStats = await UserStats.findOne({ userId });
-    
-    if (!userStats) {
-      return res.status(404).json({ message: 'User stats not found' });
+  })
+  .post(async (req, res) => {
+    try {
+      const { count } = req.body;
+      const userId = req.params.userId;
+  
+      if (!isValidObjectId(userId)) {
+        return res.status(400).json({ message: 'Invalid user ID format' });
+      }
+  
+      if (count === undefined || typeof count !== 'number' || count < 0) {
+        return res.status(400).json({ message: 'Count must be a non-negative number' });
+      }
+  
+      const userStats = await UserStats.findOne({ userId });
+      if (!userStats) {
+        return res.status(404).json({ message: 'User stats not found' });
+      }
+  
+      userStats.memorizedAyats = count;
+      userStats.lastUpdated = new Date();
+      userStats.lastActivityDate = new Date();
+      await userStats.save();
+  
+      res.json(userStats);
+    } catch (error) {
+      console.error('Error updating memorized Ayats:', error);
+      res.status(500).json({ message: 'Server error updating memorized Ayats' });
     }
-    
-    // Update the specific day's progress
-    const weeklyProgress = [...userStats.weeklyProgress];
-    weeklyProgress[dayIndex] = value;
-    
-    // Save the updated progress
-    const updatedStats = await UserStats.findOneAndUpdate(
-      { userId },
-      { 
-        $set: { 
-          weeklyProgress: weeklyProgress,
-          lastUpdated: new Date(),
-          lastActivityDate: new Date()
-        }
-      },
-      { new: true }
-    );
-    
-    res.json(updatedStats);
-  } catch (error) {
-    console.error('Error updating weekly progress:', error);
-    res.status(500).json({ message: 'Server error updating weekly progress' });
-  }
-});
+  });
+
+// Memorized Surahs - consolidate route
+app.route('/user-stats/:userId/memorized-surahs')
+  .get(async (req, res) => {
+    try {
+      const userId = req.params.userId;
+      if (!isValidObjectId(userId)) {
+        return res.status(400).json({ message: 'Invalid user ID format' });
+      }
+      
+      const userStats = await UserStats.findOne({ userId });
+      if (!userStats) {
+        return res.status(404).json({ message: 'User stats not found' });
+      }
+      
+      res.json({ memorizedSurahs: userStats.memorizedSurahs });
+    } catch (error) {
+      console.error('Error getting memorized surahs:', error);
+      res.status(500).json({ message: 'Server error getting memorized surahs' });
+    }
+  })
+  .put(async (req, res) => {
+    try {
+      const { count } = req.body;
+      const userId = req.params.userId;
+  
+      if (!isValidObjectId(userId)) {
+        return res.status(400).json({ message: 'Invalid user ID format' });
+      }
+  
+      if (count === undefined || typeof count !== 'number' || count < 0) {
+        return res.status(400).json({ message: 'Count must be a non-negative number' });
+      }
+  
+      const userStats = await UserStats.findOne({ userId });
+      if (!userStats) {
+        return res.status(404).json({ message: 'User stats not found' });
+      }
+  
+      userStats.memorizedSurahs = count;
+      userStats.lastUpdated = new Date();
+      userStats.lastActivityDate = new Date();
+      await userStats.save();
+  
+      res.json(userStats);
+    } catch (error) {
+      console.error('Error updating memorized Surahs:', error);
+      res.status(500).json({ message: 'Server error updating memorized Surahs' });
+    }
+  })
+  .post(async (req, res) => {
+    try {
+      const { count } = req.body;
+      const userId = req.params.userId;
+  
+      if (!isValidObjectId(userId)) {
+        return res.status(400).json({ message: 'Invalid user ID format' });
+      }
+  
+      if (count === undefined || typeof count !== 'number' || count < 0) {
+        return res.status(400).json({ message: 'Count must be a non-negative number' });
+      }
+  
+      const userStats = await UserStats.findOne({ userId });
+      if (!userStats) {
+        return res.status(404).json({ message: 'User stats not found' });
+      }
+  
+      userStats.memorizedSurahs = count;
+      userStats.lastUpdated = new Date();
+      userStats.lastActivityDate = new Date();
+      await userStats.save();
+  
+      res.json(userStats);
+    } catch (error) {
+      console.error('Error updating memorized Surahs:', error);
+      res.status(500).json({ message: 'Server error updating memorized Surahs' });
+    }
+  });
+
+// Surah Progress - consolidate route
+app.route('/user-stats/:userId/surah-progress')
+  .get(async (req, res) => {
+    try {
+      const userId = req.params.userId;
+  
+      if (!isValidObjectId(userId)) {
+        return res.status(400).json({ message: 'Invalid user ID format' });
+      }
+  
+      const userStats = await UserStats.findOne({ userId });
+      if (!userStats) {
+        return res.status(404).json({ message: 'User stats not found' });
+      }
+  
+      res.json(userStats.surahProgress || {});
+    } catch (error) {
+      console.error('Error retrieving surah progress:', error);
+      res.status(500).json({ message: 'Server error retrieving surah progress' });
+    }
+  })
+  .put(async (req, res) => {
+    try {
+      const { surahNumber, progress } = req.body;
+      const userId = req.params.userId;
+  
+      if (!isValidObjectId(userId)) {
+        return res.status(400).json({ message: 'Invalid user ID format' });
+      }
+  
+      if (surahNumber === undefined || typeof surahNumber !== 'number' || surahNumber <= 0 || surahNumber > 114) {
+        return res.status(400).json({ message: 'Surah number must be between 1 and 114' });
+      }
+  
+      if (progress === undefined || typeof progress !== 'number' || progress < 0 || progress > 100) {
+        return res.status(400).json({ message: 'Progress must be between 0 and 100' });
+      }
+  
+      const userStats = await UserStats.findOne({ userId });
+      if (!userStats) {
+        return res.status(404).json({ message: 'User stats not found' });
+      }
+  
+      // Ensure surahProgress is initialized as an object
+      if (!userStats.surahProgress) {
+        userStats.surahProgress = {};
+      }
+  
+      // Update the specific surah's progress
+      userStats.surahProgress[surahNumber] = progress;
+      userStats.markModified('surahProgress'); // Mark as modified since it's an object
+      userStats.lastUpdated = new Date();
+      userStats.lastActivityDate = new Date();
+      await userStats.save();
+  
+      res.json(userStats);
+    } catch (error) {
+      console.error('Error updating surah progress:', error);
+      res.status(500).json({ message: 'Server error updating surah progress' });
+    }
+  })
+  .post(async (req, res) => {
+    try {
+      const { surahNumber, progress } = req.body;
+      const userId = req.params.userId;
+  
+      if (!isValidObjectId(userId)) {
+        return res.status(400).json({ message: 'Invalid user ID format' });
+      }
+  
+      if (surahNumber === undefined || typeof surahNumber !== 'number' || surahNumber <= 0 || surahNumber > 114) {
+        return res.status(400).json({ message: 'Surah number must be between 1 and 114' });
+      }
+  
+      if (progress === undefined || typeof progress !== 'number' || progress < 0 || progress > 100) {
+        return res.status(400).json({ message: 'Progress must be between 0 and 100' });
+      }
+  
+      const userStats = await UserStats.findOne({ userId });
+      if (!userStats) {
+        return res.status(404).json({ message: 'User stats not found' });
+      }
+  
+      if (!userStats.surahProgress) {
+        userStats.surahProgress = {};
+      }
+  
+      userStats.surahProgress[surahNumber] = progress;
+      userStats.markModified('surahProgress');
+      userStats.lastUpdated = new Date();
+      userStats.lastActivityDate = new Date();
+      await userStats.save();
+  
+      res.json(userStats);
+    } catch (error) {
+      console.error('Error updating surah progress:', error);
+      res.status(500).json({ message: 'Server error updating surah progress' });
+    }
+  });
+
+// Streak - consolidate route
+app.route('/user-stats/:userId/streak')
+  .get(async (req, res) => {
+    try {
+      const userId = req.params.userId;
+  
+      if (!isValidObjectId(userId)) {
+        return res.status(400).json({ message: 'Invalid user ID format' });
+      }
+  
+      const userStats = await UserStats.findOne({ userId });
+      if (!userStats) {
+        return res.status(404).json({ message: 'User stats not found' });
+      }
+  
+      // Calculate if streak is still active
+      const lastActivity = userStats.lastActivityDate;
+      const now = new Date();
+      const oneDayMs = 24 * 60 * 60 * 1000;
+      const daysSinceLastActivity = Math.floor((now - lastActivity) / oneDayMs);
+      
+      const streakInfo = {
+        streakDays: userStats.streakDays,
+        isActive: daysSinceLastActivity <= 1, // Streak is active if last activity was today or yesterday
+        daysSinceLastActivity
+      };
+  
+      res.json(streakInfo);
+    } catch (error) {
+      console.error('Error retrieving streak information:', error);
+      res.status(500).json({ message: 'Server error retrieving streak information' });
+    }
+  })
+  .put(async (req, res) => {
+    try {
+      const { streakDays } = req.body;
+      const userId = req.params.userId;
+  
+      if (!isValidObjectId(userId)) {
+        return res.status(400).json({ message: 'Invalid user ID format' });
+      }
+  
+      if (streakDays === undefined || typeof streakDays !== 'number' || streakDays < 0) {
+        return res.status(400).json({ message: 'Streak days must be a non-negative number' });
+      }
+  
+      const userStats = await UserStats.findOne({ userId });
+      if (!userStats) {
+        return res.status(404).json({ message: 'User stats not found' });
+      }
+  
+      userStats.streakDays = streakDays;
+      userStats.lastUpdated = new Date();
+      userStats.lastActivityDate = new Date();
+      await userStats.save();
+  
+      res.json(userStats);
+    } catch (error) {
+      console.error('Error updating streak days:', error);
+      res.status(500).json({ message: 'Server error updating streak days' });
+    }
+  })
+  .post(async (req, res) => {
+    try {
+      const { streakDays } = req.body;
+      const userId = req.params.userId;
+  
+      if (!isValidObjectId(userId)) {
+        return res.status(400).json({ message: 'Invalid user ID format' });
+      }
+  
+      if (streakDays === undefined || typeof streakDays !== 'number' || streakDays < 0) {
+        return res.status(400).json({ message: 'Streak days must be a non-negative number' });
+      }
+  
+      const userStats = await UserStats.findOne({ userId });
+      if (!userStats) {
+        return res.status(404).json({ message: 'User stats not found' });
+      }
+  
+      userStats.streakDays = streakDays;
+      userStats.lastUpdated = new Date();
+      userStats.lastActivityDate = new Date();
+      await userStats.save();
+  
+      res.json(userStats);
+    } catch (error) {
+      console.error('Error updating streak days:', error);
+      res.status(500).json({ message: 'Server error updating streak days' });
+    }
+  });
+
+// Daily Goal - consolidate route
+app.route('/user-stats/:userId/daily-goal')
+  .get(async (req, res) => {
+    try {
+      const userId = req.params.userId;
+      if (!isValidObjectId(userId)) {
+        return res.status(400).json({ message: 'Invalid user ID format' });
+      }
+      
+      const userStats = await UserStats.findOne({ userId });
+      if (!userStats) {
+        return res.status(404).json({ message: 'User stats not found' });
+      }
+      
+      res.json({ dailyGoal: userStats.dailyGoal });
+    } catch (error) {
+      console.error('Error getting daily goal:', error);
+      res.status(500).json({ message: 'Server error getting daily goal' });
+    }
+  })
+  .put(async (req, res) => {
+    try {
+      const { dailyGoal } = req.body;
+      const userId = req.params.userId;
+  
+      if (!isValidObjectId(userId)) {
+        return res.status(400).json({ 
+          message: 'Invalid user ID format. Must be a valid MongoDB ObjectId.'
+        });
+      }
+  
+      if (dailyGoal === undefined || typeof dailyGoal !== 'number' || dailyGoal <= 0) {
+        return res.status(400).json({ 
+          message: 'Daily goal must be a positive number'
+        });
+      }
+  
+      // Use direct document manipulation
+      const userStats = await UserStats.findOne({ userId });
+      
+      if (!userStats) {
+        return res.status(404).json({ message: 'User stats not found' });
+      }
+      
+      userStats.dailyGoal = dailyGoal;
+      userStats.lastUpdated = new Date();
+      userStats.lastActivityDate = new Date();
+      
+      await userStats.save();
+  
+      res.json(userStats);
+    } catch (error) {
+      console.error('Error updating daily goal:', error);
+      res.status(500).json({ message: 'Server error updating daily goal' });
+    }
+  })
+  .post(async (req, res) => {
+    try {
+      const { dailyGoal } = req.body;
+      const userId = req.params.userId;
+  
+      if (!isValidObjectId(userId)) {
+        return res.status(400).json({ 
+          message: 'Invalid user ID format. Must be a valid MongoDB ObjectId.'
+        });
+      }
+  
+      if (dailyGoal === undefined || typeof dailyGoal !== 'number' || dailyGoal <= 0) {
+        return res.status(400).json({ 
+          message: 'Daily goal must be a positive number'
+        });
+      }
+  
+      const userStats = await UserStats.findOne({ userId });
+      
+      if (!userStats) {
+        return res.status(404).json({ message: 'User stats not found' });
+      }
+      
+      userStats.dailyGoal = dailyGoal;
+      userStats.lastUpdated = new Date();
+      userStats.lastActivityDate = new Date();
+      
+      await userStats.save();
+  
+      res.json(userStats);
+    } catch (error) {
+      console.error('Error updating daily goal:', error);
+      res.status(500).json({ message: 'Server error updating daily goal' });
+    }
+  });
 
 const PORT = 3000;
-const IP = '0.0.0.0';  // Change this to listen on all network interfaces
+const IP = '0.0.0.0';  // Listen on all network interfaces
 
 app.listen(PORT, IP, () => {
   console.log('Server running on:');
@@ -341,8 +825,19 @@ app.listen(PORT, IP, () => {
   console.log('- POST /login');
   console.log('- POST /registerUser');
   console.log('- GET  /user-stats/:userId');
-  console.log('- PUT  /user-stats/:userId');
-  console.log('- PUT  /user-stats/:userId/daily-goal');
   console.log('- PUT  /user-stats/:userId/weekly-progress');
-  console.log('- POST /user-stats/:userId/add-time'); // Add this line
+  console.log('- POST /user-stats/:userId/weekly-progress');
+  console.log('- PUT  /user-stats/:userId/daily-goal');
+  console.log('- POST /user-stats/:userId/daily-goal');
+  console.log('- POST /user-stats/:userId/add-time');
+  console.log('- PUT  /user-stats/:userId/memorized-ayats');
+  console.log('- POST /user-stats/:userId/memorized-ayats');
+  console.log('- PUT  /user-stats/:userId/memorized-surahs');
+  console.log('- POST /user-stats/:userId/memorized-surahs');
+  console.log('- GET  /user-stats/:userId/surah-progress');
+  console.log('- PUT  /user-stats/:userId/surah-progress');
+  console.log('- POST /user-stats/:userId/surah-progress');
+  console.log('- GET  /user-stats/:userId/streak');
+  console.log('- PUT  /user-stats/:userId/streak');
+  console.log('- POST /user-stats/:userId/streak');
 });
