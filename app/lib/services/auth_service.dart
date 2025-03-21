@@ -9,6 +9,7 @@ class AuthService {
   // Login function
   Future<Map<String, dynamic>> login(String username, String password) async {
     try {
+      print('Attempting login for user: $username');
       final response = await http.post(
         Uri.parse('$_baseUrl/login'),
         headers: {'Content-Type': 'application/json'},
@@ -18,20 +19,25 @@ class AuthService {
         }),
       );
       
+      print('Login response status: ${response.statusCode}');
+      
       final data = jsonDecode(response.body);
       
       if (response.statusCode == 200) {
+        print('Login successful. User ID: ${data['user']['_id']}');
         return {
           'success': true,
           'data': data,
         };
       } else {
+        print('Login failed: ${data['message']}');
         return {
           'success': false,
           'message': data['message'] ?? 'Login failed',
         };
       }
     } catch (e) {
+      print('Login error: ${e.toString()}');
       return {
         'success': false,
         'message': 'Error connecting to server: ${e.toString()}',
@@ -63,6 +69,100 @@ class AuthService {
         return {
           'success': false,
           'message': data['message'] ?? 'Registration failed',
+        };
+      }
+    } catch (e) {
+      return {
+        'success': false,
+        'message': 'Error connecting to server: ${e.toString()}',
+      };
+    }
+  }
+  
+  // Get user stats for dashboard
+  Future<Map<String, dynamic>> getUserStats(String userId) async {
+    try {
+      final response = await http.get(
+        Uri.parse('$_baseUrl/user-stats/$userId'),
+        headers: {'Content-Type': 'application/json'},
+      );
+      
+      final data = jsonDecode(response.body);
+      
+      if (response.statusCode == 200) {
+        return {
+          'success': true,
+          'data': data,
+        };
+      } else {
+        return {
+          'success': false,
+          'message': data['message'] ?? 'Failed to load user stats',
+        };
+      }
+    } catch (e) {
+      return {
+        'success': false,
+        'message': 'Error connecting to server: ${e.toString()}',
+      };
+    }
+  }
+  
+  // Update daily goal
+  Future<Map<String, dynamic>> updateDailyGoal(String userId, int dailyGoal) async {
+    try {
+      final response = await http.put(
+        Uri.parse('$_baseUrl/user-stats/$userId/daily-goal'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'dailyGoal': dailyGoal,
+        }),
+      );
+      
+      final data = jsonDecode(response.body);
+      
+      if (response.statusCode == 200) {
+        return {
+          'success': true,
+          'data': data,
+        };
+      } else {
+        return {
+          'success': false,
+          'message': data['message'] ?? 'Failed to update daily goal',
+        };
+      }
+    } catch (e) {
+      return {
+        'success': false,
+        'message': 'Error connecting to server: ${e.toString()}',
+      };
+    }
+  }
+  
+  // Update weekly progress
+  Future<Map<String, dynamic>> updateWeeklyProgress(String userId, int dayIndex, int value) async {
+    try {
+      final response = await http.put(
+        Uri.parse('$_baseUrl/user-stats/$userId/weekly-progress'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'dayIndex': dayIndex,
+          'value': value,
+        }),
+      );
+      
+      final data = jsonDecode(response.body);
+      
+      if (response.statusCode == 200) {
+        return {
+          'success': true,
+          'data': data,
+        };
+      } else {
+        return {
+          'success': false,
+          'message': data['message'] ?? 'Failed to update weekly progress',
         };
       }
     } catch (e) {

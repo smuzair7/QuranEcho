@@ -324,10 +324,10 @@ final Map<String, List<String>> _letterToTranscriptionPatterns = {
           _showResultsPopup(result);
           
           // Show animation for excellent or perfect results
-          if (result.containsKey('assessment') &&
-              (result['assessment'] == 'Excellent' || result['assessment'] == 'Perfect')) {
-            _showSuccessAnimation();
-          }
+          // if (result.containsKey('assessment') &&
+          //     (result['assessment'] == 'Excellent' || result['assessment'] == 'Perfect')) {
+          //   _showSuccessAnimation();
+          // }
           
           return;
         }
@@ -398,7 +398,7 @@ final Map<String, List<String>> _letterToTranscriptionPatterns = {
               _showResultsPopup(overrideResult);
               
               // Show success animation
-              _showSuccessAnimation();
+              //_showSuccessAnimation();
               
               return;
             }
@@ -1353,27 +1353,27 @@ Widget build(BuildContext context) {
     body: SafeArea(
       child: Container(
         width: double.infinity,
-        padding: const EdgeInsets.symmetric(horizontal: 20),
+        padding: const EdgeInsets.symmetric(horizontal: 24), // Increased horizontal padding
         child: Column(
           children: [
-            // Top section - Main letter display (with space around it)
-            const SizedBox(height: 20),
+            // Top section - Main letter display (with more space around it)
+            const SizedBox(height: 30), // Increased top spacing
             if (widget.letter != null) 
               _buildMainLetterDisplay(),
-            const SizedBox(height: 20),
+            const SizedBox(height: 40), // Increased spacing after letter
                 
             // Audio visualization
             if (_isRecording || _isPlaying || _isPlayingReference) ...[
               _buildAudioVisualization(),
-              const SizedBox(height: 16),
+              const SizedBox(height: 30), // Increased spacing
             ],
             
             // Status text
             Container(
-              padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 16),
+              padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 20), // Increased padding
               decoration: BoxDecoration(
                 color: Colors.grey.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(16), // Larger radius
                 border: Border.all(
                   color: Colors.grey.withOpacity(0.2),
                 ),
@@ -1382,14 +1382,14 @@ Widget build(BuildContext context) {
                 _recordingStatus,
                 textAlign: TextAlign.center,
                 style: TextStyle(
-                  fontSize: 15,
+                  fontSize: 16, // Larger text
                   fontWeight: _isRecording ? FontWeight.bold : FontWeight.normal,
                   color: _isRecording ? Colors.red : Colors.grey[800],
                 ),
               ),
             ),
             
-            const SizedBox(height: 24),
+            const SizedBox(height: 40), // Increased spacing before controls
             
             // Recording controls
             _buildRecordingControls(),
@@ -1401,7 +1401,7 @@ Widget build(BuildContext context) {
             if (widget.letter != null)
               _buildCollapsibleGuide(),
             
-            const SizedBox(height: 16),
+            const SizedBox(height: 24), // Increased bottom spacing
           ],
         ),
       ),
@@ -1417,20 +1417,20 @@ Widget _buildMainLetterDisplay() {
     children: [
       // Large letter container
       Container(
-        width: 160,  // Increased size
-        height: 160, // Increased size
+        width: 200,  // Increased size
+        height: 200, // Increased size
         decoration: BoxDecoration(
           color: const Color(0xFF1F8A70).withOpacity(0.1),
           shape: BoxShape.circle,
           border: Border.all(
             color: const Color(0xFF1F8A70).withOpacity(0.3),
-            width: 2,
+            width: 3,  // Thicker border
           ),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.05),
-              blurRadius: 10,
-              offset: const Offset(0, 4),
+              color: Colors.black.withOpacity(0.08),
+              blurRadius: 15,
+              offset: const Offset(0, 6),
             ),
           ],
         ),
@@ -1438,7 +1438,7 @@ Widget _buildMainLetterDisplay() {
           child: Text(
             widget.letter!,
             style: const TextStyle(
-              fontSize: 90,  // Increased font size
+              fontSize: 120,  // Increased font size
               fontWeight: FontWeight.bold,
               fontFamily: 'Scheherazade',
             ),
@@ -1448,19 +1448,19 @@ Widget _buildMainLetterDisplay() {
       
       // Sound button positioned at top-right
       Positioned(
-        top: 0,
-        right: 0,
+        top: 5,
+        right: 5,
         child: Container(
-          width: 54,  // Smaller
-          height: 54,  // Smaller
+          width: 65,  // Larger sound button
+          height: 65,
           decoration: BoxDecoration(
             color: _isPlayingReference ? Colors.orange : const Color(0xFF00A896),
             shape: BoxShape.circle,
             boxShadow: [
               BoxShadow(
-                color: (_isPlayingReference ? Colors.orange : const Color(0xFF00A896)).withOpacity(0.4),
-                blurRadius: 8,
-                offset: const Offset(0, 3),
+                color: (_isPlayingReference ? Colors.orange : const Color(0xFF00A896)).withOpacity(0.5),
+                blurRadius: 10,
+                offset: const Offset(0, 4),
               ),
             ],
           ),
@@ -1473,7 +1473,7 @@ Widget _buildMainLetterDisplay() {
                 child: Icon(
                   _isPlayingReference ? Icons.stop : Icons.volume_up,
                   color: Colors.white,
-                  size: 28,  // Smaller
+                  size: 34,  // Larger icon
                 ),
               ),
             ),
@@ -1487,7 +1487,7 @@ Widget _buildMainLetterDisplay() {
 // Updated method for recording controls
 Widget _buildRecordingControls() {
   return Row(
-    mainAxisAlignment: MainAxisAlignment.center,
+    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
     children: [
       // Record button
       _buildEnhancedControlButton(
@@ -1497,9 +1497,8 @@ Widget _buildRecordingControls() {
         color: _isRecording ? Colors.red : const Color(0xFF1F8A70),
         icon: _isRecording ? Icons.stop : Icons.mic,
         label: _isRecording ? 'Stop' : 'Record',
+        size: 85,  // Increased size
       ),
-      
-      const SizedBox(width: 20),
       
       // Play button
       _buildEnhancedControlButton(
@@ -1511,9 +1510,8 @@ Widget _buildRecordingControls() {
         color: _isPlaying ? Colors.orange : const Color(0xFF00A896),
         icon: _isPlaying ? Icons.stop : Icons.play_arrow,
         label: _isPlaying ? 'Stop' : 'Play',
+        size: 85,  // Increased size
       ),
-      
-      const SizedBox(width: 20),
       
       // Analyze button
       _buildEnhancedControlButton(
@@ -1527,25 +1525,27 @@ Widget _buildRecordingControls() {
         icon: Icons.analytics_outlined,
         label: 'Analyze',
         isLoading: _isProcessing,
+        size: 85,  // Increased size
       ),
     ],
   );
 }
 
-// Enhanced control button with label
+// Enhanced control button with label and customizable size
 Widget _buildEnhancedControlButton({
   required VoidCallback? onPressed, 
   required Color color, 
   required IconData icon,
   required String label,
   bool isLoading = false,
+  double size = 70,  // Default size with new parameter
 }) {
   return Column(
     mainAxisSize: MainAxisSize.min,
     children: [
       SizedBox(
-        width: 70,
-        height: 70,
+        width: size,
+        height: size,
         child: ElevatedButton(
           onPressed: onPressed,
           style: ElevatedButton.styleFrom(
@@ -1553,13 +1553,13 @@ Widget _buildEnhancedControlButton({
             foregroundColor: Colors.white,
             padding: EdgeInsets.zero,
             shape: const CircleBorder(),
-            elevation: 6,
-            shadowColor: color.withOpacity(0.5),
+            elevation: 8,  // Increased elevation
+            shadowColor: color.withOpacity(0.6),  // More visible shadow
           ),
           child: isLoading
-              ? const SizedBox(
-                  width: 28,
-                  height: 28,
+              ? SizedBox(
+                  width: size * 0.4,  // Proportional to button size
+                  height: size * 0.4,
                   child: CircularProgressIndicator(
                     color: Colors.white,
                     strokeWidth: 3,
@@ -1567,15 +1567,15 @@ Widget _buildEnhancedControlButton({
                 )
               : Icon(
                   icon,
-                  size: 32,
+                  size: size * 0.45,  // Proportional to button size
                 ),
         ),
       ),
-      const SizedBox(height: 8),
+      const SizedBox(height: 12),  // Increased spacing
       Text(
         label,
         style: TextStyle(
-          fontSize: 14,
+          fontSize: 16,  // Increased font size
           fontWeight: FontWeight.w500,
           color: onPressed == null ? Colors.grey : Colors.grey[800],
         ),

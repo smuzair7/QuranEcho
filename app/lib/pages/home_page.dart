@@ -11,7 +11,7 @@ class HomePage extends StatelessWidget {
   Widget build(BuildContext context) {
     // Access the user provider
     final userProvider = Provider.of<UserProvider>(context);
-
+    
     return Scaffold(
       appBar: AppBar(
         title: const Text(''), // Removed "Quran Echo" from the title
@@ -89,12 +89,13 @@ class HomePage extends StatelessWidget {
             children: [
               // Reduced top padding
               const SizedBox(height: 30),
-
+              
               // Logo and App Name
-              CircleAvatar(
-                radius: 50,
-                backgroundColor: Colors.white.withOpacity(0.9),
-                child: ClipOval(
+              ClipOval(
+                child: Container(
+                  width: 100, // Diameter of the circle
+                  height: 100,
+                  color: Colors.white.withOpacity(0.9),
                   child: Image.asset(
                     'assets/images/quran-echo-logo.png',
                     width: 90, // Slightly smaller than diameter (100)
@@ -122,18 +123,17 @@ class HomePage extends StatelessWidget {
                 'Learn and Memorize the Quran',
                 style: TextStyle(
                   fontSize: 16,
-                  color:
-                      Theme.of(context).colorScheme.onPrimary.withOpacity(0.8),
+                  color: Theme.of(context).colorScheme.onPrimary.withOpacity(0.8),
                 ),
               ),
               const SizedBox(height: 40), // Reduced from 60 to 40
-
+              
               // Menu Options
               Expanded(
                 child: Container(
                   padding: const EdgeInsets.symmetric(horizontal: 20),
                   decoration: BoxDecoration(
-                    color: Theme.of(context).colorScheme.surface,
+                    color: Theme.of(context).colorScheme.background,
                     borderRadius: const BorderRadius.only(
                       topLeft: Radius.circular(30),
                       topRight: Radius.circular(30),
@@ -146,8 +146,7 @@ class HomePage extends StatelessWidget {
                       ),
                     ],
                   ),
-                  child: SingleChildScrollView(
-                    // Added SingleChildScrollView to handle potential overflow
+                  child: SingleChildScrollView( // Added SingleChildScrollView to handle potential overflow
                     child: Column(
                       children: [
                         const SizedBox(height: 30),
@@ -156,14 +155,13 @@ class HomePage extends StatelessWidget {
                           style: TextStyle(
                             fontSize: 20,
                             fontWeight: FontWeight.w500,
-                            color: Theme.of(context).colorScheme.onSurface,
+                            color: Theme.of(context).colorScheme.onBackground,
                           ),
                         ),
                         const SizedBox(height: 25), // Reduced from 30 to 25
-
+                        
                         // First row with Makharij and Hifz cards
-                        Padding(
-                          // Added padding to ensure cards don't extend beyond screen edges
+                        Padding( // Added padding to ensure cards don't extend beyond screen edges
                           padding: const EdgeInsets.only(bottom: 20.0),
                           child: Row(
                             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
@@ -175,14 +173,12 @@ class HomePage extends StatelessWidget {
                                   description: 'Learn proper pronunciation',
                                   icon: Icons.record_voice_over,
                                   color: const Color(0xFF1F8A70),
-                                  onTap: () =>
-                                      Navigator.pushNamed(context, '/makharij'),
+                                  onTap: () => Navigator.pushNamed(context, '/makharij'),
                                 ),
                               ),
-
-                              const SizedBox(
-                                  width: 10), // Add spacing between cards
-
+                              
+                              const SizedBox(width: 10), // Add spacing between cards
+                              
                               // Hifz Card
                               Flexible(
                                 child: MenuCard(
@@ -190,16 +186,15 @@ class HomePage extends StatelessWidget {
                                   description: 'Memorize the Quran',
                                   icon: Icons.auto_stories,
                                   color: const Color(0xFF00A896),
-                                  onTap: () => Navigator.pushNamed(
-                                      context, '/hifz_select'),
+                                  onTap: () => Navigator.pushNamed(context, '/hifz_select'),
                                 ),
                               ),
                             ],
                           ),
                         ),
-
+                        
                         const SizedBox(height: 20), // Add spacing between rows
-
+                        
                         // Second row with Lehja and Read Quran cards
                         Padding(
                           padding: const EdgeInsets.symmetric(horizontal: 20.0),
@@ -213,14 +208,12 @@ class HomePage extends StatelessWidget {
                                   description: 'Learn recitation styles',
                                   icon: Icons.headphones,
                                   color: const Color(0xFF05668D),
-                                  onTap: () =>
-                                      Navigator.pushNamed(context, '/lehja'),
+                                  onTap: () => Navigator.pushNamed(context, '/lehja'),
                                 ),
                               ),
-
-                              const SizedBox(
-                                  width: 10), // Add spacing between cards
-
+                              
+                              const SizedBox(width: 10), // Add spacing between cards
+                              
                               // Read Quran Card
                               Flexible(
                                 child: MenuCard(
@@ -228,16 +221,15 @@ class HomePage extends StatelessWidget {
                                   description: 'Read the Holy Quran',
                                   icon: Icons.book,
                                   color: const Color(0xFF00A896),
-                                  onTap: () => Navigator.pushNamed(
-                                      context, '/read_select'),
+                                  onTap: () => Navigator.pushNamed(context, '/read_select'),
                                 ),
                               ),
                             ],
                           ),
                         ),
-
+                        
                         const SizedBox(height: 20), // Add spacing for new row
-
+                        
                         // Third row with Dashboard card
                         Padding(
                           padding: const EdgeInsets.symmetric(horizontal: 20.0),
@@ -251,13 +243,13 @@ class HomePage extends StatelessWidget {
                                   description: 'Track your progress',
                                   icon: Icons.dashboard,
                                   color: const Color(0xFF025E73),
-                                  onTap: () => Navigator.pushNamed(
-                                      context, '/dashboard'),
+                                  onTap: () => Navigator.pushNamed(context, '/dashboard'),
                                 ),
                               ),
                             ],
                           ),
                         ),
+                        
                       ],
                     ),
                   ),
