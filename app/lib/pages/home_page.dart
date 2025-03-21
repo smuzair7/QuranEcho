@@ -18,6 +18,12 @@ class HomePage extends StatelessWidget {
         backgroundColor: const Color(0xFF00A896),
         foregroundColor: Colors.white,
         elevation: 0,
+        // Add Dashboard button to the leading position
+        leading: IconButton(
+          icon: const Icon(Icons.dashboard),
+          tooltip: 'Dashboard',
+          onPressed: () => Navigator.pushNamed(context, '/dashboard'),
+        ),
         actions: [
           // Show either username with logout option or login button
           if (userProvider.isLoggedIn)
@@ -228,27 +234,7 @@ class HomePage extends StatelessWidget {
                           ),
                         ),
                         
-                        const SizedBox(height: 20), // Add spacing for new row
-                        
-                        // Third row with Dashboard card
-                        Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 20.0),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                            children: [
-                              // Dashboard Card
-                              Flexible(
-                                child: MenuCard(
-                                  title: 'Dashboard',
-                                  description: 'Track your progress',
-                                  icon: Icons.dashboard,
-                                  color: const Color(0xFF025E73),
-                                  onTap: () => Navigator.pushNamed(context, '/dashboard'),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
+                       
                         
                       ],
                     ),
