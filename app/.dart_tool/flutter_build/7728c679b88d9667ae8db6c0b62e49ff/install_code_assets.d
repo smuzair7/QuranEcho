@@ -1,0 +1,1 @@
+ E:\\QuranEcho\\app\\.dart_tool\\flutter_build\\7728c679b88d9667ae8db6c0b62e49ff\\native_assets.json: 

@@ -1,0 +1,85 @@
+Flutter crash report.
+Please report a bug at https://github.com/flutter/flutter/issues.
+
+## command
+
+flutter run -d chrome
+
+## exception
+
+FileSystemException: FileSystemException: Exists failed, path = 'C:\Users\hafmo\Documents\Mobile_App\Android_Studio\app\assets\images\' (OS Error: The filename, directory name, or volume label syntax is incorrect.
+, errno = 123)
+
+```
+#0      _Directory.existsSync (dart:io/directory_impl.dart:107:7)
+#1      ForwardingFileSystemEntity.existsSync (package:file/src/forwarding/forwarding_file_system_entity.dart:43:33)
+#2      ErrorHandlingDirectory.existsSync.<anonymous closure> (package:flutter_tools/src/base/error_handling_io.dart:459:22)
+#3      _runSync (package:flutter_tools/src/base/error_handling_io.dart:550:14)
+#4      ErrorHandlingDirectory.existsSync (package:flutter_tools/src/base/error_handling_io.dart:458:12)
+#5      ManifestAssetBundle._parseAssetsFromFolder (package:flutter_tools/src/asset.dart:1031:47)
+#6      ManifestAssetBundle._parseAssets (package:flutter_tools/src/asset.dart:906:9)
+#7      ManifestAssetBundle.build (package:flutter_tools/src/asset.dart:297:54)
+<asynchronous suspension>
+#8      ResidentWebRunner._updateDevFS (package:flutter_tools/src/isolated/resident_web_runner.dart:566:26)
+<asynchronous suspension>
+#9      ResidentWebRunner.run.<anonymous closure> (package:flutter_tools/src/isolated/resident_web_runner.dart:329:41)
+<asynchronous suspension>
+#10     asyncGuard.<anonymous closure> (package:flutter_tools/src/base/async_guard.dart:109:26)
+<asynchronous suspension>
+```
+
+## flutter doctor
+
+```
+[32m[✓][39m Flutter (Channel stable, 3.29.0, on Microsoft Windows [Version 10.0.22631.4890], locale
+    en-GB) [523ms]
+    [32m•[39m Flutter version 3.29.0 on channel stable at C:\flutter\src\flutter
+    [32m•[39m Upstream repository https://github.com/flutter/flutter.git
+    [32m•[39m Framework revision 35c388afb5 (4 weeks ago), 2025-02-10 12:48:41 -0800
+    [32m•[39m Engine revision f73bfc4522
+    [32m•[39m Dart version 3.7.0
+    [32m•[39m DevTools version 2.42.2
+
+[32m[✓][39m Windows Version (11 Home 64-bit, 23H2, 2009) [4.2s]
+
+[32m[✓][39m Android toolchain - develop for Android devices (Android SDK version 35.0.1) [3.7s]
+    [32m•[39m Android SDK at C:\Users\hafmo\AppData\Local\Android\sdk
+    [32m•[39m Platform android-35, build-tools 35.0.1
+    [32m•[39m Java binary at: C:\Program Files\Android\Android Studio\jbr\bin\java
+      This is the JDK bundled with the latest Android Studio installation on this machine.
+      To manually set the JDK path, use: `flutter config --jdk-dir="path/to/jdk"`.
+    [32m•[39m Java version OpenJDK Runtime Environment (build 21.0.4+-12508038-b607.1)
+    [32m•[39m All Android licenses accepted.
+
+[32m[✓][39m Chrome - develop for the web [115ms]
+    [32m•[39m Chrome at C:\Program Files\Google\Chrome\Application\chrome.exe
+
+[32m[✓][39m Visual Studio - develop Windows apps (Visual Studio Community 2022 17.7.4) [115ms]
+    [32m•[39m Visual Studio at C:\Program Files\Microsoft Visual Studio\2022\Community
+    [32m•[39m Visual Studio Community 2022 version 17.7.34031.279
+    [32m•[39m Windows 10 SDK version 10.0.22621.0
+
+[32m[✓][39m Android Studio (version 2024.2) [9ms]
+    [32m•[39m Android Studio at C:\Program Files\Android\Android Studio
+    [32m•[39m Flutter plugin can be installed from:
+      🔨 https://plugins.jetbrains.com/plugin/9212-flutter
+    [32m•[39m Dart plugin can be installed from:
+      🔨 https://plugins.jetbrains.com/plugin/6351-dart
+    [32m•[39m Java version OpenJDK Runtime Environment (build 21.0.4+-12508038-b607.1)
+
+[32m[✓][39m VS Code (version 1.99.0-insider) [7ms]
+    [32m•[39m VS Code at C:\Users\hafmo\AppData\Local\Programs\Microsoft VS Code Insiders
+    [32m•[39m Flutter extension can be installed from:
+      🔨 https://marketplace.visualstudio.com/items?itemName=Dart-Code.flutter
+
+[32m[✓][39m Connected device (3 available) [121ms]
+    [32m•[39m Windows (desktop) • windows • windows-x64    • Microsoft Windows [Version
+      10.0.22631.4890]
+    [32m•[39m Chrome (web)      • chrome  • web-javascript • Google Chrome 134.0.6998.35
+    [32m•[39m Edge (web)        • edge    • web-javascript • Microsoft Edge 134.0.3124.51
+
+[32m[✓][39m Network resources [1,286ms]
+    [32m•[39m All expected network resources are available.
+
+[32m•[39m No issues found!
+```
