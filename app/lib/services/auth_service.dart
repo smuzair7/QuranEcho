@@ -2,9 +2,8 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 
 class AuthService {
-  // Update with correct server address
-  // When using Android emulator, use your laptop IP address that's running the server
-  static const String _baseUrl = 'http://192.168.100.113:3000'; // Updated to your laptop's IP and correct port
+  // Updated to be consistent with other services - use your actual server IP
+  static const String _baseUrl = 'http://192.168.100.142:3000';
   
   // Login function
   Future<Map<String, dynamic>> login(String username, String password) async {

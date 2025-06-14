@@ -14,10 +14,18 @@ import 'pages/dashboard_page.dart';
 import 'package:provider/provider.dart';
 import 'services/user_provider.dart';
 import 'pages/hifz_select_surah_page.dart';
+import 'package:quran_echo/services/api_service.dart';
+import 'package:quran_echo/services/sync_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await SharedPreferences.getInstance(); // Initialize shared preferences
+  
+  // Try to initialize the API service at startup
+  await ApiService.initialize();
+  
+  // Start background sync process for any pending offline changes
+  SyncService.startBackgroundSync();
   
   runApp(
     ChangeNotifierProvider(

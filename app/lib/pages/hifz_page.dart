@@ -11,8 +11,8 @@ import 'package:queue/queue.dart';
 import 'dart:math' as math;
 import 'package:quran_echo/pages/revision_page.dart';
 import 'package:provider/provider.dart';
-import '../services/user_provider.dart';
-import '../services/user_stats_service.dart';
+import 'package:quran_echo/services/user_stats_service.dart';
+import 'package:quran_echo/services/user_provider.dart';
 
 class HifzPage extends StatefulWidget {
   const HifzPage({super.key});
@@ -38,8 +38,9 @@ class _HifzPageState extends State<HifzPage> {
   String _recordingStatus = 'Tap to start recording';
 
   // API variables
-  static const String _apiToken = "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"; 
-  static const String _apiUrl = "https://router.huggingface.co/hf-inference/models/tarteel-ai/whisper-base-ar-quran";
+  static const String _apiToken = "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";
+  static const String _apiUrl =
+      "https://vb1pti1yhtwgtlth.us-east-1.aws.endpoints.huggingface.cloud";
   bool _isProcessing = false;
   String? _apiResult;
   List<String> _transcriptions = [];
@@ -64,167 +65,37 @@ class _HifzPageState extends State<HifzPage> {
 
   // Text visibility during recording
   bool _isTextVisible = true;
-  
-  // Add variables for stats tracking
+
+  // User stats variables
   final UserStatsService _userStatsService = UserStatsService();
-  DateTime? _sessionStartTime;
-  int _sessionTimeInSeconds = 0;
-  int _newlyMemorizedAyahs = 0;
   bool _didCompleteSurah = false;
-  bool _isSessionActive = false;
+  DateTime? _sessionStartTime;
+  int _newlyMemorizedAyahs = 0;
 
   @override
   void initState() {
     super.initState();
     _loadSurahContent();
-    _startSession(); // Start tracking session time
+    // Initialize session start time when the page loads
+    _sessionStartTime = DateTime.now();
   }
 
   @override
   void dispose() {
-    // Ensure stats are updated before leaving the page
-    _endSession();
-    
-    // Add a bit more delay to ensure stats are updated properly
-    if (_newlyMemorizedAyahs > 0 || _didCompleteSurah) {
-      Future.delayed(const Duration(milliseconds: 500), () {
-        // This forces the dashboard to refresh next time it's opened
-        final userProvider = Provider.of<UserProvider>(context, listen: false);
-        if (userProvider.isLoggedIn) {
-          userProvider.notifyListeners();
-        }
-      });
-    }
-    
     _audioRecorder.dispose();
     _audioPlayer.dispose();
     super.dispose();
   }
-  
-  // Start tracking memorization session time
-  void _startSession() {
-    _sessionStartTime = DateTime.now();
-    _isSessionActive = true;
-  }
-  
-  // End tracking and calculate total time spent
-  void _endSession() {
-    if (_isSessionActive && _sessionStartTime != null) {
-      final now = DateTime.now();
-      _sessionTimeInSeconds = now.difference(_sessionStartTime!).inSeconds;
-      _isSessionActive = false;
-      
-      // Update stats to backend if user made progress
-      if (_newlyMemorizedAyahs > 0 || _didCompleteSurah) {
-        _updateUserStatsToBackend();
-      }
-    }
-  }
-  
-  // Renamed method for clarity
-  Future<void> _updateUserStatsToBackend() async {
-    final userProvider = Provider.of<UserProvider>(context, listen: false);
-    
-    if (!userProvider.isLoggedIn || userProvider.userId == null) {
-      print('User not logged in, stats not saved');
-      return;
-    }
-    
-    final userId = userProvider.userId!;
-    print('Updating stats for user ID: $userId');
-    print('Stats to update: Ayahs+$_newlyMemorizedAyahs, Completed surah: $_didCompleteSurah, Time: ${(_sessionTimeInSeconds / 60).ceil()}min');
-    
-    try {
-      // Get current stats first
-      final statsResult = await _userStatsService.getUserStats(userId);
-      
-      if (statsResult['success']) {
-        final stats = Map<String, dynamic>.from(statsResult['data']);
-        print('Current stats before update: ${stats.toString()}');
-        
-        // Update stats with new progress
-        final int currentAyats = stats['memorizedAyats'] ?? 0;
-        final int currentSurahs = stats['memorizedSurahs'] ?? 0;
-        final int currentTimeSpent = stats['timeSpentMinutes'] ?? 0;
-        
-        stats['memorizedAyats'] = currentAyats + _newlyMemorizedAyahs;
-        
-        // Only increment memorized surahs if the user completed the surah
-        if (_didCompleteSurah) {
-          stats['memorizedSurahs'] = currentSurahs + 1;
-        }
-        
-        // Add session time to total time spent (convert seconds to minutes)
-        stats['timeSpentMinutes'] = currentTimeSpent + (_sessionTimeInSeconds / 60).ceil();
-        
-        // Update streak data - set today's progress
-        final now = DateTime.now();
-        final dayIndex = now.weekday - 1; // 0 for Monday, 6 for Sunday
-        
-        List<int> weeklyProgress = List<int>.from(stats['weeklyProgress'] ?? [0, 0, 0, 0, 0, 0, 0]);
-        weeklyProgress[dayIndex] = weeklyProgress[dayIndex] + _newlyMemorizedAyahs;
-        stats['weeklyProgress'] = weeklyProgress;
-        
-        // Update lastActivityDate
-        stats['lastActivityDate'] = DateTime.now().toIso8601String();
-        
-        print('Updated stats to send: ${stats.toString()}');
-        
-        // IMPORTANT FIX: The debug output for API requests
-        print('Making API call to: http://192.168.100.113:3000/user-stats/$userId');
-        print('Request body: ${jsonEncode(stats)}');
-        
-        // Send updated stats to backend - we need to see what's being sent in detail
-        try {
-          final response = await http.put(
-            Uri.parse('http://192.168.100.113:3000/user-stats/$userId'),
-            headers: {'Content-Type': 'application/json'},
-            body: jsonEncode(stats),
-          );
-          
-          print('API response status: ${response.statusCode}');
-          print('API response body: ${response.body}');
-          
-          if (response.statusCode == 200) {
-            print('Stats updated successfully in backend!');
-            
-            // Also update the UserProvider state - this is critical for UI refresh
-            await userProvider.updateUserStats(stats);
-            print('UserProvider stats updated!');
-            
-            // Update daily progress for the streak calculation
-            final weeklyResult = await _userStatsService.updateWeeklyProgress(userId, dayIndex, weeklyProgress[dayIndex]);
-            print('Weekly progress update result: ${weeklyResult['success']}');
-            
-            // Force a rebuild of any widgets that depend on UserProvider
-            if (mounted) {
-              setState(() {
-                // Just triggering a rebuild
-              });
-            }
-          } else {
-            print('Failed to update stats: ${response.body}');
-          }
-        } catch (e) {
-          print('HTTP error when updating stats: $e');
-          print('Stack trace: ${StackTrace.current}');
-        }
-      } else {
-        print('Failed to get current stats: ${statsResult['message']}');
-      }
-    } catch (e) {
-      print('Error updating stats: $e');
-      print('Stack trace: ${StackTrace.current}');
-    }
-  }
 
   Future<void> _loadSurahContent() async {
     try {
-      final String jsonData = await rootBundle.loadString('assets/data/quran.json');
+      final String jsonData =
+          await rootBundle.loadString('assets/data/quran.json');
       final Map<String, dynamic> quranData = json.decode(jsonData);
 
       // Get surah number from arguments
-      final args = ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
+      final args =
+          ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
       if (args != null) {
         surahNumber = args['surahNumber'];
         surahName = args['surahName'];
@@ -258,7 +129,8 @@ class _HifzPageState extends State<HifzPage> {
           'surahNumber': surahNumber,
           'ayahNumber': int.parse(ayahNumber),
           'text': ayahData['text'], // Plain text without diacritics
-          'displayText': ayahData['displayText'], // Text with diacritics for display
+          'displayText':
+              ayahData['displayText'], // Text with diacritics for display
           'hasRecording': false,
           'recordingPath': null,
         });
@@ -270,7 +142,8 @@ class _HifzPageState extends State<HifzPage> {
       setState(() {
         ayahs = parsedAyahs;
         isLoading = false;
-        _currentAyah = ayahs.isNotEmpty ? ayahs[0] : null; // Initialize the first ayah
+        _currentAyah =
+            ayahs.isNotEmpty ? ayahs[0] : null; // Initialize the first ayah
       });
     } catch (e) {
       setState(() {
@@ -296,7 +169,8 @@ class _HifzPageState extends State<HifzPage> {
       });
 
       final directory = await getTemporaryDirectory();
-      String fileName = 'surah_${ayah['surahNumber']}_ayah_${ayah['ayahNumber']}_${DateTime.now().millisecondsSinceEpoch}.wav';
+      String fileName =
+          'surah_${ayah['surahNumber']}_ayah_${ayah['ayahNumber']}_${DateTime.now().millisecondsSinceEpoch}.wav';
       final filePath = path.join(directory.path, fileName);
 
       final config = RecordConfig(
@@ -360,13 +234,13 @@ class _HifzPageState extends State<HifzPage> {
   }
 
   void _enqueueApiRequest(String path) {
-   _apiQueue.add(() async {
-    await _processAudioWithAPI(path);
-    // Set processing to false when each task completes
-    setState(() {
-      _isProcessing = false;
+    _apiQueue.add(() async {
+      await _processAudioWithAPI(path);
+      // Set processing to false when each task completes
+      setState(() {
+        _isProcessing = false;
+      });
     });
-  });
   }
 
   Future<void> _processAudioWithAPI(String path) async {
@@ -388,10 +262,9 @@ class _HifzPageState extends State<HifzPage> {
       return;
     }
 
-    // Update the headers to match the expected format
     final headers = {
       "Authorization": "Bearer $_apiToken",
-      "Content-Type": "audio/wav", // Keep as wav since we're recording wav files
+      "Content-Type": "audio/wav",
     };
 
     const int maxRetries = 4;
@@ -409,21 +282,20 @@ class _HifzPageState extends State<HifzPage> {
           await Future.delayed(Duration(milliseconds: delayMs));
         }
 
-        // Send the raw audio bytes as the body (not JSON)
         final response = await http.post(
           Uri.parse(_apiUrl),
           headers: headers,
-          body: audioBytes, // Send raw audio bytes
+          body: audioBytes,
         );
 
         if (response.statusCode == 200) {
           final decodedResponse = jsonDecode(response.body);
           String text = '';
-          
-          // Updated response parsing to handle both formats
           if (decodedResponse is Map && decodedResponse.containsKey('text')) {
             text = decodedResponse['text'];
-          } else if (decodedResponse is List && decodedResponse.isNotEmpty && decodedResponse[0] is Map) {
+          } else if (decodedResponse is List &&
+              decodedResponse.isNotEmpty &&
+              decodedResponse[0] is Map) {
             text = decodedResponse[0]['generated_text'] ?? '';
           } else {
             text = decodedResponse.toString();
@@ -434,7 +306,8 @@ class _HifzPageState extends State<HifzPage> {
           setState(() {
             _isProcessing = false;
             _transcriptions.add(text);
-            _apiResult = "Successfully processed audio with Tarteel AI Quran model";
+            _apiResult =
+                "Successfully processed audio with Tarteel AI Quran model";
           });
 
           success = true;
@@ -444,7 +317,8 @@ class _HifzPageState extends State<HifzPage> {
         } else {
           setState(() {
             _isProcessing = false;
-            _apiResult = "API Error ${response.statusCode}\n${response.reasonPhrase}\n\nPlease check your API token or try another model.";
+            _apiResult =
+                "API Error ${response.statusCode}\n${response.reasonPhrase}\n\nPlease check your API token or try another model.";
           });
           break;
         }
@@ -453,7 +327,8 @@ class _HifzPageState extends State<HifzPage> {
         if (currentRetry >= maxRetries) {
           setState(() {
             _isProcessing = false;
-            _apiResult = "Error processing audio after $maxRetries attempts: ${e.toString()}";
+            _apiResult =
+                "Error processing audio after $maxRetries attempts: ${e.toString()}";
           });
         }
       }
@@ -462,7 +337,8 @@ class _HifzPageState extends State<HifzPage> {
     if (!success && currentRetry >= maxRetries) {
       setState(() {
         _isProcessing = false;
-        _apiResult = "API failed to respond after $maxRetries attempts. The model may still be loading. Please try again in a minute.";
+        _apiResult =
+            "API failed to respond after $maxRetries attempts. The model may still be loading. Please try again in a minute.";
       });
     }
 
@@ -480,20 +356,54 @@ class _HifzPageState extends State<HifzPage> {
       } catch (e) {
         try {
           // Try another common approach
-          final bytes = text.codeUnits.map((c) => c < 128 ? c : (c - 848)).toList();
+          final bytes =
+              text.codeUnits.map((c) => c < 128 ? c : (c - 848)).toList();
           return String.fromCharCodes(bytes);
         } catch (e2) {
           // Fall back to manual replacement
           final Map<String, String> replacements = {
-            'Ø§': 'ا', 'Ø£': 'أ', 'Ø¢': 'آ', 'Ø¥': 'إ', 'Ø¨': 'ب',
-            'Øª': 'ت', 'Ø«': 'ث', 'Ø¬': 'ج', 'Ø­': 'ح', 'Ø®': 'خ',
-            'Ø¯': 'د', 'Ø°': 'ذ', 'Ø±': 'ر', 'Ø²': 'ز', 'Ø³': 'س',
-            'Ø´': 'ش', 'Øµ': 'ص', 'Ø¶': 'ض', 'Ø·': 'ط', 'Ø¸': 'ظ',
-            'Ø¹': 'ع', 'Øº': 'غ', 'Ù': 'ف', 'Ù‚': 'ق', 'Ùƒ': 'ك',
-            'Ù„': 'ل', 'Ù…': 'م', 'Ù†': 'ن', 'Ù‡': 'ه', 'Ùˆ': 'و',
-            'ÙŠ': 'ي', 'Ø©': 'ة', 'Ø¡': 'ء', 'Ù‰': 'ى', 'ÙŽ': 'َ',
-            'Ù': 'ُ', 'Ù': 'ِ', 'Ù‹': 'ً', 'ÙŒ': 'ٌ', 'Ù': 'ٍ',
-            'Ù': 'ّ', 'Ù': 'ْ',
+            'Ø§': 'ا',
+            'Ø£': 'أ',
+            'Ø¢': 'آ',
+            'Ø¥': 'إ',
+            'Ø¨': 'ب',
+            'Øª': 'ت',
+            'Ø«': 'ث',
+            'Ø¬': 'ج',
+            'Ø­': 'ح',
+            'Ø®': 'خ',
+            'Ø¯': 'د',
+            'Ø°': 'ذ',
+            'Ø±': 'ر',
+            'Ø²': 'ز',
+            'Ø³': 'س',
+            'Ø´': 'ش',
+            'Øµ': 'ص',
+            'Ø¶': 'ض',
+            'Ø·': 'ط',
+            'Ø¸': 'ظ',
+            'Ø¹': 'ع',
+            'Øº': 'غ',
+            'Ù': 'ف',
+            'Ù‚': 'ق',
+            'Ùƒ': 'ك',
+            'Ù„': 'ل',
+            'Ù…': 'م',
+            'Ù†': 'ن',
+            'Ù‡': 'ه',
+            'Ùˆ': 'و',
+            'ÙŠ': 'ي',
+            'Ø©': 'ة',
+            'Ø¡': 'ء',
+            'Ù‰': 'ى',
+            'ÙŽ': 'َ',
+            'Ù': 'ُ',
+            'Ù': 'ِ',
+            'Ù‹': 'ً',
+            'ÙŒ': 'ٌ',
+            'Ù': 'ٍ',
+            'Ù': 'ّ',
+            'Ù': 'ْ',
           };
 
           String result = text;
@@ -509,42 +419,44 @@ class _HifzPageState extends State<HifzPage> {
 
   void _verifyRecitationAndProgress() {
     if (_transcriptions.isEmpty) return;
-  
+
     String originalText = _currentAyah!['displayText'] ?? _currentAyah!['text'];
     String cleanOriginal = _prepareTextForComparison(originalText);
     String cleanTranscription = _prepareTextForComparison(_transcriptions.last);
-  
+
     // Calculate match percentage
     int matchScore = _calculateMatchScore(cleanTranscription, cleanOriginal);
     int passThreshold = 70; // 70% accuracy required to pass
-  
+
     bool isPassed = matchScore >= passThreshold;
-  
+
     setState(() {
       _hasVerifiedCurrentAyah = true;
-  
-      // Check if this is a newly memorized ayah
+
       if (isPassed && !_memorizedAyahIndices.contains(_currentAyahIndex)) {
         _memorizedAyahIndices.add(_currentAyahIndex);
-        _newlyMemorizedAyahs++; // Track newly memorized ayahs for stats
+        _newlyMemorizedAyahs++; // Increment newly memorized ayahs count
         
-        // Check if user completed the entire surah
-        if (_memorizedAyahIndices.length == ayahs.length) {
-          _didCompleteSurah = true;
-          
-          // Update stats immediately when completing a surah
-          _updateUserStatsToBackend();
-        }
+        // Update user stats immediately when an ayah is memorized
+        _updateUserStats();
       }
-      
+
       // Always show text after recitation for review
       _isTextVisible = true;
-      
+
       // Show success message based on result
-      _recordingStatus = isPassed 
+      _recordingStatus = isPassed
           ? 'Great ($matchScore% match)'
           : 'Try again ($matchScore% match)';
     });
+
+    // Automatically move to next ayah if recitation is correct
+    // if (isPassed) {
+    //   // Add a small delay to show the success message before moving
+    //   Future.delayed(const Duration(seconds: 2), () {
+    //     _moveToNextAyah();
+    //   });
+    // }
   }
 
   void _moveToNextAyah() {
@@ -558,49 +470,21 @@ class _HifzPageState extends State<HifzPage> {
         _recordingStatus = 'Tap to start recording';
       });
     } else {
-      // Reached end of surah
+      // Reached end of surah - mark as completed
+      _didCompleteSurah = true;
+      _updateUserStats(); // Final stats update for surah completion
+      
       showDialog(
         context: context,
         builder: (context) => AlertDialog(
           title: const Text('Congratulations!'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Text('You have completed memorization of this surah. MashaAllah!'),
-              if (_newlyMemorizedAyahs > 0)
-                Padding(
-                  padding: const EdgeInsets.only(top: 16.0),
-                  child: Text(
-                    'New ayahs memorized: $_newlyMemorizedAyahs',
-                    style: const TextStyle(fontWeight: FontWeight.bold),
-                  ),
-                ),
-              if (_didCompleteSurah)
-                Padding(
-                  padding: const EdgeInsets.only(top: 8.0),
-                  child: Text(
-                    'Surah completed! 🎉',
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      color: Colors.green.shade700,
-                    ),
-                  ),
-                ),
-            ],
-          ),
+          content: const Text(
+              'You have completed memorization of this surah. MashaAllah!'),
           actions: [
             TextButton(
               onPressed: () {
                 Navigator.pop(context);
                 _stopPracticing();
-                
-                // Check if all ayahs were memorized
-                if (_memorizedAyahIndices.length == ayahs.length) {
-                  _didCompleteSurah = true;
-                }
-                
-                // Force stats update when completing the surah
-                _endSession();
               },
               child: const Text('Return to Surah View'),
             ),
@@ -686,173 +570,234 @@ class _HifzPageState extends State<HifzPage> {
   }
 
   String _prepareTextForComparison(String text) {
-  // Instead of removing diacritics, only normalize alef forms
-  // and perform other basic normalizations
-  String result = text;
-  
-  // Normalize alef forms
-  result = result.replaceAll('أ', 'ا');
-  result = result.replaceAll('إ', 'ا');
-  result = result.replaceAll('آ', 'ا');
+    // Instead of removing diacritics, only normalize alef forms
+    // and perform other basic normalizations
+    String result = text;
 
-  // You might still want to normalize some whitespace
-  result = result.trim();
-  
-  return result;
-}
+    // Normalize alef forms
+    result = result.replaceAll('أ', 'ا');
+    result = result.replaceAll('إ', 'ا');
+    result = result.replaceAll('آ', 'ا');
+
+    // You might still want to normalize some whitespace
+    result = result.trim();
+
+    return result;
+  }
 
   int _calculateMatchScore(String transcription, String original) {
-  List<String> originalWords = original.split(' ');
-  List<String> transcriptionWords = transcription.split(' ');
+    List<String> originalWords = original.split(' ');
+    List<String> transcriptionWords = transcription.split(' ');
 
-  int correctWords = 0;
-  
-  // More precise matching - compare each word
-  for (int i = 0; i < transcriptionWords.length; i++) {
-    if (i < originalWords.length && transcriptionWords[i] == originalWords[i]) {
-      correctWords++;
+    int correctWords = 0;
+
+    // More precise matching - compare each word
+    for (int i = 0; i < transcriptionWords.length; i++) {
+      if (i < originalWords.length &&
+          transcriptionWords[i] == originalWords[i]) {
+        correctWords++;
+      }
     }
+
+    int totalWords = math.max(originalWords.length, transcriptionWords.length);
+    if (totalWords == 0) return 0;
+
+    return (correctWords * 100 ~/ totalWords);
   }
 
-  int totalWords = math.max(originalWords.length, transcriptionWords.length);
-  if (totalWords == 0) return 0;
+  Widget _buildTranscriptionWithHighlightedErrors(
+      String transcription, Map<String, dynamic> ayah) {
+    String originalText = ayah['displayText'] ?? ayah['text'];
 
-  return (correctWords * 100 ~/ totalWords);
-}
+    // Clean up text for better comparison
+    String cleanOriginal = _prepareTextForComparison(originalText);
+    String cleanTranscription = _prepareTextForComparison(transcription);
 
-Widget _buildTranscriptionWithHighlightedErrors(String transcription, Map<String, dynamic> ayah) {
-  String originalText = ayah['displayText'] ?? ayah['text'];
-  
-  // Clean up text for better comparison
-  String cleanOriginal = _prepareTextForComparison(originalText);
-  String cleanTranscription = _prepareTextForComparison(transcription);
-  
-  List<String> originalWords = cleanOriginal.split(' ');
-  List<String> transcriptionWords = cleanTranscription.split(' ');
-  
-  // Create a set of original words for quick matching
-  Set<String> originalWordsSet = originalWords.toSet();
-  
-  // Create list of TextSpans for rich text display
-  List<TextSpan> textSpans = [];
-  
-  for (int i = 0; i < transcriptionWords.length; i++) {
-    String currentWord = transcriptionWords[i];
-    bool isCorrect = originalWordsSet.contains(currentWord);
-    
-    textSpans.add(
-      TextSpan(
-        text: i < transcriptionWords.length - 1 ? '$currentWord ' : currentWord,
-        style: TextStyle(
-          fontSize: 18,
-          fontFamily: 'Scheherazade',
-          fontWeight: FontWeight.w500,
-          // Change to white for correct words to match dark theme
-          color: isCorrect ? Colors.green : Colors.red,
+    List<String> originalWords = cleanOriginal.split(' ');
+    List<String> transcriptionWords = cleanTranscription.split(' ');
+
+    // Create a set of original words for quick matching
+    Set<String> originalWordsSet = originalWords.toSet();
+
+    // Create list of TextSpans for rich text display
+    List<TextSpan> textSpans = [];
+
+    for (int i = 0; i < transcriptionWords.length; i++) {
+      String currentWord = transcriptionWords[i];
+      bool isCorrect = originalWordsSet.contains(currentWord);
+
+      textSpans.add(
+        TextSpan(
+          text:
+              i < transcriptionWords.length - 1 ? '$currentWord ' : currentWord,
+          style: TextStyle(
+            fontSize: 18,
+            fontFamily: 'Scheherazade',
+            fontWeight: FontWeight.w500,
+            // Change to white for correct words to match dark theme
+            color: isCorrect ? Colors.green : Colors.red,
+          ),
         ),
-      ),
+      );
+    }
+
+    return RichText(
+      textDirection: TextDirection.rtl,
+      text: TextSpan(children: textSpans),
     );
   }
-  
-  return RichText(
-    textDirection: TextDirection.rtl,
-    text: TextSpan(children: textSpans),
-  );
-}
 
-  // Add this method to build a stats summary widget
-  Widget _buildStatsSummary() {
-    if (_newlyMemorizedAyahs == 0) return const SizedBox.shrink();
-    
-    return Container(
-      margin: const EdgeInsets.symmetric(vertical: 8),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: const Color(0xFF1E1E1E),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0xFF333333)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            'Session Progress',
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
-              color: Colors.white,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'Newly memorized ayahs: $_newlyMemorizedAyahs',
-            style: const TextStyle(
-              fontSize: 14,
-              color: Colors.white70,
-            ),
-          ),
-          if (_sessionStartTime != null)
-            Text(
-              'Session time: ${DateTime.now().difference(_sessionStartTime!).inMinutes} mins',
-              style: const TextStyle(
-                fontSize: 14,
-                color: Colors.white70,
-              ),
-            ),
-          if (_didCompleteSurah)
-            Text(
-              '✓ Completed surah',
-              style: TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.bold,
-                color: Colors.green.shade400,
-              ),
-            ),
-        ],
-      ),
-    );
+  Future<void> _updateUserStats() async {
+    try {
+      final userProvider = Provider.of<UserProvider>(context, listen: false);
+      final userId = userProvider.userId;
+      
+      if (userId == null) {
+        print('Error: User ID is null, cannot update stats');
+        return;
+      }
+      
+      print('Updating user stats for user: $userId');
+      print('Newly memorized ayahs in this session: $_newlyMemorizedAyahs');
+      
+      // Calculate session time
+      final sessionTimeMinutes = _sessionStartTime != null 
+          ? DateTime.now().difference(_sessionStartTime!).inMinutes 
+          : 0;
+      
+      // Get current stats first
+      final statsResult = await _userStatsService.getUserStats(userId);
+      
+      if (statsResult['success']) {
+        final currentStats = Map<String, dynamic>.from(statsResult['data']);
+        print('Current stats from server: $currentStats');
+        
+        // Calculate new values - only add newly memorized ayahs from this session
+        final currentMemorizedAyats = currentStats['memorizedAyats'] ?? 0;
+        final newMemorizedAyatsTotal = currentMemorizedAyats + _newlyMemorizedAyahs;
+        
+        // Update memorized ayats if there are newly memorized ones
+        if (_newlyMemorizedAyahs > 0) {
+          print('Updating memorized ayats from $currentMemorizedAyats to $newMemorizedAyatsTotal');
+          
+          final ayatsResult = await _userStatsService.updateMemorizedAyats(userId, newMemorizedAyatsTotal);
+          if (ayatsResult['success']) {
+            print('Successfully updated memorized ayats');
+            
+            // Reset the newly memorized counter since we've updated the server
+            _newlyMemorizedAyahs = 0;
+          } else {
+            print('Failed to update memorized ayats: ${ayatsResult['message']}');
+          }
+        }
+        
+        // Update memorized surahs if surah was completed
+        if (_didCompleteSurah) {
+          final currentMemorizedSurahs = currentStats['memorizedSurahs'] ?? 0;
+          final newMemorizedSurahsTotal = currentMemorizedSurahs + 1;
+          
+          print('Updating memorized surahs from $currentMemorizedSurahs to $newMemorizedSurahsTotal');
+          
+          final surahsResult = await _userStatsService.updateMemorizedSurahs(userId, newMemorizedSurahsTotal);
+          if (surahsResult['success']) {
+            print('Successfully updated memorized surahs');
+            _didCompleteSurah = false; // Reset flag
+          } else {
+            print('Failed to update memorized surahs: ${surahsResult['message']}');
+          }
+        }
+        
+        // Add time spent if session time > 0
+        if (sessionTimeMinutes > 0) {
+          print('Adding $sessionTimeMinutes minutes to time spent');
+          
+          final timeResult = await _userStatsService.addTimeSpent(userId, sessionTimeMinutes);
+          if (timeResult['success']) {
+            print('Successfully added time spent');
+            // Reset session start time
+            _sessionStartTime = DateTime.now();
+          } else {
+            print('Failed to add time spent: ${timeResult['message']}');
+          }
+        }
+        
+        // Update weekly progress for today - only if we have newly memorized ayahs
+        final now = DateTime.now();
+        final dayIndex = now.weekday - 1; // Monday = 0, Sunday = 6
+        
+        if (_memorizedAyahIndices.isNotEmpty) {
+          print('Updating weekly progress for day $dayIndex');
+          
+          final currentWeeklyProgress = List<int>.from(currentStats['weeklyProgress'] ?? [0, 0, 0, 0, 0, 0, 0]);
+          final todaysProgress = currentWeeklyProgress[dayIndex] + 1; // Add 1 for this ayah
+          
+          final weeklyResult = await _userStatsService.updateWeeklyProgress(
+            userId, 
+            dayIndex, 
+            todaysProgress
+          );
+          if (!weeklyResult['success']) {
+            print('Failed to update weekly progress: ${weeklyResult['message']}');
+          }
+        }
+        
+        // Update surah progress if applicable
+        if (surahNumber != null) {
+          final progressPercentage = (_memorizedAyahIndices.length / ayahs.length * 100).round();
+          print('Updating surah $surahNumber progress to $progressPercentage%');
+          
+          final progressResult = await _userStatsService.updateSurahProgress(
+            userId, 
+            surahNumber!, 
+            progressPercentage
+          );
+          if (!progressResult['success']) {
+            print('Failed to update surah progress: ${progressResult['message']}');
+          }
+        }
+        
+        // Get updated stats and refresh UserProvider
+        final updatedStatsResult = await _userStatsService.getUserStats(userId);
+        if (updatedStatsResult['success']) {
+          await userProvider.updateUserStats(updatedStatsResult['data']);
+          print('Successfully updated all user stats!');
+          
+          // Force a rebuild
+          if (mounted) {
+            setState(() {
+              // Just triggering a rebuild
+            });
+          }
+        }
+      } else {
+        print('Failed to get current stats: ${statsResult['message']}');
+      }
+    } catch (e) {
+      print('Error updating stats: $e');
+      print('Stack trace: ${StackTrace.current}');
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    // Ensure UserProvider is accessible here
-    final userProvider = Provider.of<UserProvider>(context, listen: false);
-    
     return Scaffold(
       appBar: AppBar(
         title: Text(surahName != null ? 'Hifz: $surahName' : 'Hifz'),
         backgroundColor: const Color(0xFF00A896),
         foregroundColor: Colors.white,
         elevation: 0,
-        // Add a refresh button to manually update stats
-        actions: [
-          if (_newlyMemorizedAyahs > 0 || _didCompleteSurah)
-            IconButton(
-              icon: const Icon(Icons.sync),
-              tooltip: 'Update Stats',
-              onPressed: () {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Updating statistics...')),
-                );
-                _updateUserStatsToBackend().then((_) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Statistics updated')),
-                  );
-                });
-              },
-            ),
-        ],
       ),
-      body: isLoading 
-        ? const Center(child: CircularProgressIndicator())
-        : errorMessage.isNotEmpty
-            ? Center(child: Text(errorMessage))
-            : _buildSurahContent(),
+      body: isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : errorMessage.isNotEmpty
+              ? Center(child: Text(errorMessage))
+              : _buildSurahContent(),
     );
   }
 
   Widget _buildPracticePage() {
-    if (_currentAyah == null) return const Center(child: Text('No ayah selected'));
+    if (_currentAyah == null)
+      return const Center(child: Text('No ayah selected'));
 
     return SingleChildScrollView(
       child: Container(
@@ -878,7 +823,9 @@ Widget _buildTranscriptionWithHighlightedErrors(String transcription, Map<String
                     child: ClipRRect(
                       borderRadius: BorderRadius.circular(8),
                       child: LinearProgressIndicator(
-                        value: ayahs.isEmpty ? 0 : (_currentAyahIndex + 1) / ayahs.length,
+                        value: ayahs.isEmpty
+                            ? 0
+                            : (_currentAyahIndex + 1) / ayahs.length,
                         minHeight: 10,
                         backgroundColor: Colors.grey[300],
                       ),
@@ -984,11 +931,14 @@ Widget _buildTranscriptionWithHighlightedErrors(String transcription, Map<String
               children: [
                 // Record button
                 ElevatedButton(
-                  onPressed: _isPlaying ? null : (_isRecording
-                      ? () => _stopRecording(_currentAyah!)
-                      : () => _startRecording(_currentAyah!)),
+                  onPressed: _isPlaying
+                      ? null
+                      : (_isRecording
+                          ? () => _stopRecording(_currentAyah!)
+                          : () => _startRecording(_currentAyah!)),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: _isRecording ? Colors.red : const Color(0xFF05668D),
+                    backgroundColor:
+                        _isRecording ? Colors.red : const Color(0xFF05668D),
                     foregroundColor: Colors.white,
                     // Reduce padding to make button smaller
                     padding: const EdgeInsets.all(12),
@@ -1006,13 +956,19 @@ Widget _buildTranscriptionWithHighlightedErrors(String transcription, Map<String
                 // Play button
                 ElevatedButton(
                   onPressed: (_currentAyah != null &&
-                      _currentAyah!['recordingPath'] != null &&
-                      _currentAyah!['recordingPath'].toString().isNotEmpty &&
-                      !_isRecording)
-                      ? (_isPlaying ? _stopPlayback : () => _playRecording(_currentAyah!['recordingPath']))
+                          _currentAyah!['recordingPath'] != null &&
+                          _currentAyah!['recordingPath']
+                              .toString()
+                              .isNotEmpty &&
+                          !_isRecording)
+                      ? (_isPlaying
+                          ? _stopPlayback
+                          : () =>
+                              _playRecording(_currentAyah!['recordingPath']))
                       : null,
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: _isPlaying ? Colors.orange : const Color(0xFF028090),
+                    backgroundColor:
+                        _isPlaying ? Colors.orange : const Color(0xFF028090),
                     foregroundColor: Colors.white,
                     padding: const EdgeInsets.all(16),
                     shape: const CircleBorder(),
@@ -1056,518 +1012,515 @@ Widget _buildTranscriptionWithHighlightedErrors(String transcription, Map<String
   }
 
   Widget _buildSurahContent() {
-  if (ayahs.isEmpty) {
-    return Center(child: Text('No ayahs to display'));
-  }
+    if (ayahs.isEmpty) {
+      return Center(child: Text('No ayahs to display'));
+    }
 
-  // Get current ayah
-  final currentAyah = ayahs[_currentAyahIndex];
-  
-  // Get previous ayah if available
-  final previousAyah = _currentAyahIndex > 0 ? ayahs[_currentAyahIndex - 1] : null;
-  
-  // Get next ayah if available
-  final nextAyah = _currentAyahIndex < ayahs.length - 1 ? ayahs[_currentAyahIndex + 1] : null;
+    // Get current ayah
+    final currentAyah = ayahs[_currentAyahIndex];
 
-  return Container(
-    decoration: BoxDecoration(
-      gradient: LinearGradient(
-        begin: Alignment.topCenter,
-        end: Alignment.bottomCenter,
-        colors: [
-          Colors.black87,
-          const Color(0xFF121212), // Very dark gray
-        ],
-      ),
-    ),
-    child: Column(
-      children: [
-        // Progress indicator
-        Container(
-          width: double.infinity,
-          padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
-          color: const Color(0xFF212121),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    'Memorized: ${_memorizedAyahIndices.length}/${ayahs.length} Ayahs',
-                    style: const TextStyle(
-                      fontWeight: FontWeight.bold, 
-                      fontSize: 16,
-                      color: Colors.white,
-                    ),
-                  ),
-                  // Session timer
-                  if (_isSessionActive && _sessionStartTime != null)
-                    Text(
-                      'Session: ${DateTime.now().difference(_sessionStartTime!).inMinutes}m',
-                      style: const TextStyle(
-                        fontSize: 14,
-                        color: Colors.white70,
-                      ),
-                    ),
-                ],
-              ),
-              const SizedBox(height: 8),
-              ClipRRect(
-                borderRadius: BorderRadius.circular(4),
-                child: LinearProgressIndicator(
-                  value: ayahs.isEmpty ? 0 : _memorizedAyahIndices.length / ayahs.length,
-                  backgroundColor: Colors.grey.shade800,
-                  minHeight: 8,
-                ),
-              ),
-            ],
-          ),
-        ),
-        
-        // Display session stats
-        if (_newlyMemorizedAyahs > 0)
-          _buildStatsSummary(),
-            
-        // Rest of UI
-        // ...existing code...
-        // Add dropdown for direct navigation to any verse
-        Container(
-          width: double.infinity,
-          padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
-          color: const Color(0xFF1E1E1E),
-          child: Row(
-            children: [
-              Text(
-                'Go to Ayah: ',
-                style: const TextStyle(
-                  fontWeight: FontWeight.w500,
-                  fontSize: 15,
-                  color: Colors.white70,
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF333333),
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: const Color(0xFF555555)),
-                  ),
-                  child: DropdownButtonHideUnderline(
-                    child: DropdownButton<int>(
-                      isExpanded: true,
-                      value: _currentAyahIndex,
-                      dropdownColor: const Color(0xFF333333),
-                      icon: const Icon(Icons.keyboard_arrow_down, color: Colors.white70),
-                      style: const TextStyle(color: Colors.white),
-                      items: List.generate(ayahs.length, (index) {
-                        return DropdownMenuItem<int>(
-                          value: index,
-                          child: Text(
-                            'Ayah ${ayahs[index]['ayahNumber']}',
-                            style: const TextStyle(color: Colors.white),
-                          ),
-                        );
-                      }),
-                      onChanged: (int? newIndex) {
-                        if (newIndex != null) {
-                          setState(() {
-                            _currentAyahIndex = newIndex;
-                            _currentAyah = ayahs[newIndex];
-                            _isPracticingCurrentAyah = false;
-                            _transcriptions = [];
-                          });
-                        }
-                      },
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
+    // Get previous ayah if available
+    final previousAyah =
+        _currentAyahIndex > 0 ? ayahs[_currentAyahIndex - 1] : null;
 
-        const SizedBox(height: 8),
-        
-        // Ayah cards
-        Expanded(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              children: [
-                // Previous Ayah (if available)
-                if (previousAyah != null)
-                  _buildAyahCard(
-                    previousAyah, 
-                    isCurrent: false,
-                    isMemorized: _memorizedAyahIndices.contains(previousAyah['ayahNumber']),
-                    label: 'Previous Ayah'
-                  ),
-                
-                const SizedBox(height: 16),
-                
-                // Current Ayah
-                _buildAyahCard(
-                  currentAyah, 
-                  isCurrent: true,
-                  isMemorized: _memorizedAyahIndices.contains(currentAyah['ayahNumber']),
-                  label: 'Current Ayah'
-                ),
-                
-                const SizedBox(height: 16),
-                
-                // Next Ayah (if available)
-                if (nextAyah != null)
-                  _buildAyahCard(
-                    nextAyah, 
-                    isCurrent: false,
-                    isMemorized: _memorizedAyahIndices.contains(nextAyah['ayahNumber']),
-                    label: 'Next Ayah'
-                  ),
-              ],
-            ),
-          ),
-        ),
-        
-        // Add this to the bottom of your _buildSurahContent method, just above the navigation controls
-        // Only show when user has memorized at least 2 ayahs
-        if (_memorizedAyahIndices.length >= 2)
-          Container(
-            padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
-            decoration: BoxDecoration(
-              color: const Color(0xFF1E1E1E),
-              border: Border(
-                top: BorderSide(color: const Color(0xFF333333), width: 1),
-                bottom: BorderSide(color: const Color(0xFF333333), width: 1),
-              ),
-            ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                ElevatedButton.icon(
-                  onPressed: () {
-                    // Find the maximum memorized ayah index
-                    int maxMemorizedIndex = _memorizedAyahIndices.isNotEmpty 
-                        ? _memorizedAyahIndices.reduce(math.max)
-                        : 0;
-                    
-                    // Navigate to revision page
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => RevisionPage(
-                          ayahs: ayahs,
-                          memorizedIndices: _memorizedAyahIndices,
-                          defaultStartIndex: 0,
-                          defaultEndIndex: maxMemorizedIndex,
-                          surahName: surahName ?? '',
-                        ),
-                      ),
-                    );
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.deepPurple,
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                  ),
-                  icon: const Icon(Icons.repeat),
-                  label: const Text('Revise Memorized Ayahs'),
-                ),
-              ],
-            ),
-          ),
-        
-        // Navigation controls
-        Container(
-          padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
-          decoration: BoxDecoration(
-            color: const Color(0xFF212121),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.4),
-                spreadRadius: 1,
-                blurRadius: 5,
-                offset: const Offset(0, -3),
-              ),
-            ],
-          ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              // Previous button
-              ElevatedButton.icon(
-                onPressed: _currentAyahIndex > 0 ? _moveToPreviousAyah : null,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.grey.shade700,
-                  foregroundColor: Colors.white,
-                ),
-                icon: const Icon(Icons.arrow_back),
-                label: const Text('Previous'),
-              ),
-              
-              // Next button
-              ElevatedButton.icon(
-                onPressed: _currentAyahIndex < ayahs.length - 1 ? _moveToNextAyah : null,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF00A896),
-                  foregroundColor: Colors.white,
-                ),
-                icon: const Icon(Icons.arrow_forward),
-                label: const Text('Next'),
-              ),
-            ],
-          ),
-        ),
-      ],
-    ),
-  );
-}
+    // Get next ayah if available
+    final nextAyah = _currentAyahIndex < ayahs.length - 1
+        ? ayahs[_currentAyahIndex + 1]
+        : null;
 
-  Widget _buildAyahCard(
-  Map<String, dynamic> ayah, 
-  {required bool isCurrent, required bool isMemorized, required String label}
-) {
-  final bool isPracticing = isCurrent && _isPracticingCurrentAyah;
-  
-  return Card(
-    margin: const EdgeInsets.symmetric(vertical: 4),
-    elevation: isCurrent ? 4 : 1,
-    // Change card background to white instead of dark
-    color: Colors.white,
-    shape: RoundedRectangleBorder(
-      borderRadius: BorderRadius.circular(12),
-      side: isCurrent 
-        ? BorderSide(color: Theme.of(context).primaryColor, width: 2) 
-        : BorderSide.none,
-    ),
-    child: Padding(
-      padding: const EdgeInsets.all(16.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: isCurrent ? Theme.of(context).primaryColor : Colors.grey.shade400,
-                  shape: BoxShape.circle,
-                ),
-                child: Text(
-                  '${ayah['ayahNumber']}',
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
-              const SizedBox(width: 12),
-             // Also update the label text color for better visibility on white background
-              Text(
-                label,
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: isCurrent ? FontWeight.bold : FontWeight.normal,
-                  // Change to a darker color that works on white background
-                  color: isCurrent ? Theme.of(context).primaryColor : Colors.grey.shade800,
-                ),
-              ),
-              const Spacer(),
-              if (isMemorized)
-                Icon(Icons.check_circle, color: Colors.green),
-            ],
-          ),
-          const SizedBox(height: 16),
-          
-          // Show text only if not practicing or if text should be visible
-          if (!isPracticing || _isTextVisible)
-            Text(
-              ayah['displayText'] ?? ayah['text'],
-              style: TextStyle(
-                fontSize: isCurrent ? 26 : 20,
-                fontFamily: 'Scheherazade',
-                height: 1.8,
-                // Change text color for better contrast on dark background
-                color: Colors.black,
-              ),
-              textDirection: TextDirection.rtl,
-              textAlign: TextAlign.right,
-            ),
-            
-          // Practice section shown directly in the card when practicing
-          if (isPracticing) ...[
-            const SizedBox(height: 16),
-            
-            // Status text
-            Center(
-              child: Text(
-                _recordingStatus,
-                textAlign: TextAlign.center,
-                style: const TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-            ),
-              
-            const SizedBox(height: 16),
-              
-            // Recording controls
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                // Record button
-                ElevatedButton(
-                  onPressed: _isPlaying ? null : (_isRecording
-                    ? () => _stopRecording(ayah)
-                    : () => _startRecording(ayah)),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: _isRecording ? Colors.red : const Color(0xFF05668D),
-                    foregroundColor: Colors.white,
-                    // Reduce padding to make button smaller
-                    padding: const EdgeInsets.all(12),
-                    shape: const CircleBorder(),
-                  ),
-                  child: Icon(
-                    _isRecording ? Icons.stop : Icons.mic,
-                    // Reduce icon size
-                    size: 28,
-                  ),
-                ),
-                
-                const SizedBox(width: 20),
-                
-                // Play button (if recording exists)
-               // Update the play button size in the row of controls
-              if (ayah['hasRecording'] == true)
-                ElevatedButton(
-                  onPressed: !_isRecording ? (_isPlaying 
-                    ? _stopPlayback 
-                    : () => _playRecording(ayah['recordingPath'])) : null,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: _isPlaying ? Colors.orange : const Color(0xFF028090),
-                    foregroundColor: Colors.white,
-                    // Make padding same as record button
-                    padding: const EdgeInsets.all(12),
-                    shape: const CircleBorder(),
-                  ),
-                  child: Icon(
-                    _isPlaying ? Icons.stop : Icons.play_arrow,
-                    // Make icon size same as record button
-                    size: 28,
-                  ),
-                ),
-              ],
-            ),
-              
-            // API processing status
-            if (_isProcessing) ...[
-              const SizedBox(height: 20),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const SizedBox(
-                    width: 24,
-                    height: 24,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  ),
-                  const SizedBox(width: 10),
-                  Flexible(
-                    child: Text(
-                      _apiResult ?? "Processing recitation...",
-                      style: const TextStyle(
-                        fontSize: 14,
-                        fontStyle: FontStyle.italic,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ],
-              
-            // Show transcription results if available
-            if (_transcriptions.isNotEmpty) ...[
-              const SizedBox(height: 20),
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  // Light background for container
-                  color: Colors.blue.shade50,
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: Colors.blue.shade200),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Your recitation:',
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        color: Colors.blue.shade800,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    _buildTranscriptionWithHighlightedErrors(_transcriptions.last, ayah),
-                  ],
-                ),
-              ),
-            ],
+    return Container(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [
+            Colors.black87,
+            const Color(0xFF121212), // Very dark gray
           ],
-          
-          // Practice/Review Button - Only show when not already practicing
-          if ((isCurrent || isMemorized) && !isPracticing)
-            Center(
+        ),
+      ),
+      child: Column(
+        children: [
+          // Progress indicator
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+            color: const Color(0xFF212121),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Text(
+                  'Memorized: ${_memorizedAyahIndices.length}/${ayahs.length} Ayahs',
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                    color: Colors.white,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(4),
+                  child: LinearProgressIndicator(
+                    value: ayahs.isEmpty
+                        ? 0
+                        : _memorizedAyahIndices.length / ayahs.length,
+                    backgroundColor: Colors.grey.shade800,
+                    minHeight: 8,
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          // Add dropdown for direct navigation to any verse
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+            color: const Color(0xFF1E1E1E),
+            child: Row(
+              children: [
+                Text(
+                  'Go to Ayah: ',
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w500,
+                    fontSize: 15,
+                    color: Colors.white70,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF333333),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: const Color(0xFF555555)),
+                    ),
+                    child: DropdownButtonHideUnderline(
+                      child: DropdownButton<int>(
+                        isExpanded: true,
+                        value: _currentAyahIndex,
+                        dropdownColor: const Color(0xFF333333),
+                        icon: const Icon(Icons.keyboard_arrow_down,
+                            color: Colors.white70),
+                        style: const TextStyle(color: Colors.white),
+                        items: List.generate(ayahs.length, (index) {
+                          return DropdownMenuItem<int>(
+                            value: index,
+                            child: Text(
+                              'Ayah ${ayahs[index]['ayahNumber']}',
+                              style: const TextStyle(color: Colors.white),
+                            ),
+                          );
+                        }),
+                        onChanged: (int? newIndex) {
+                          if (newIndex != null) {
+                            setState(() {
+                              _currentAyahIndex = newIndex;
+                              _currentAyah = ayahs[newIndex];
+                              _isPracticingCurrentAyah = false;
+                              _transcriptions = [];
+                            });
+                          }
+                        },
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          const SizedBox(height: 8),
+
+          // Ayah cards
+          Expanded(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                children: [
+                  // Previous Ayah (if available)
+                  if (previousAyah != null)
+                    _buildAyahCard(previousAyah,
+                        isCurrent: false,
+                        isMemorized: _memorizedAyahIndices
+                            .contains(previousAyah['ayahNumber']),
+                        label: 'Previous Ayah'),
+
+                  const SizedBox(height: 16),
+
+                  // Current Ayah
+                  _buildAyahCard(currentAyah,
+                      isCurrent: true,
+                      isMemorized: _memorizedAyahIndices
+                          .contains(currentAyah['ayahNumber']),
+                      label: 'Current Ayah'),
+
+                  const SizedBox(height: 16),
+
+                  // Next Ayah (if available)
+                  if (nextAyah != null)
+                    _buildAyahCard(nextAyah,
+                        isCurrent: false,
+                        isMemorized: _memorizedAyahIndices
+                            .contains(nextAyah['ayahNumber']),
+                        label: 'Next Ayah'),
+                ],
+              ),
+            ),
+          ),
+
+          // Add this to the bottom of your _buildSurahContent method, just above the navigation controls
+          // Only show when user has memorized at least 2 ayahs
+          if (_memorizedAyahIndices.length >= 2)
+            Container(
+              padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+              decoration: BoxDecoration(
+                color: const Color(0xFF1E1E1E),
+                border: Border(
+                  top: BorderSide(color: const Color(0xFF333333), width: 1),
+                  bottom: BorderSide(color: const Color(0xFF333333), width: 1),
+                ),
+              ),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  ElevatedButton(
+                  ElevatedButton.icon(
                     onPressed: () {
-                      setState(() {
-                        _currentAyah = ayah;
-                        _isPracticingCurrentAyah = true;
-                        _isTextVisible = true;
-                        _transcriptions = [];
-                        // Start recording immediately
-                        _startRecording(ayah);
-                      });
+                      // Find the maximum memorized ayah index
+                      int maxMemorizedIndex = _memorizedAyahIndices.isNotEmpty
+                          ? _memorizedAyahIndices.reduce(math.max)
+                          : 0;
+
+                      // Navigate to revision page
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => RevisionPage(
+                            ayahs: ayahs,
+                            memorizedIndices: _memorizedAyahIndices,
+                            defaultStartIndex: 0,
+                            defaultEndIndex: maxMemorizedIndex,
+                            surahName: surahName ?? '',
+                          ),
+                        ),
+                      );
                     },
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF05668D),
+                      backgroundColor: Colors.deepPurple,
                       foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 20, vertical: 12),
+                    ),
+                    icon: const Icon(Icons.repeat),
+                    label: const Text('Revise Memorized Ayahs'),
+                  ),
+                ],
+              ),
+            ),
+
+          // Navigation controls
+          Container(
+            padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
+            decoration: BoxDecoration(
+              color: const Color(0xFF212121),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.4),
+                  spreadRadius: 1,
+                  blurRadius: 5,
+                  offset: const Offset(0, -3),
+                ),
+              ],
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                // Previous button
+                ElevatedButton.icon(
+                  onPressed: _currentAyahIndex > 0 ? _moveToPreviousAyah : null,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.grey.shade700,
+                    foregroundColor: Colors.white,
+                  ),
+                  icon: const Icon(Icons.arrow_back),
+                  label: const Text('Previous'),
+                ),
+
+                // Next button
+                ElevatedButton.icon(
+                  onPressed: _currentAyahIndex < ayahs.length - 1
+                      ? _moveToNextAyah
+                      : null,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF00A896),
+                    foregroundColor: Colors.white,
+                  ),
+                  icon: const Icon(Icons.arrow_forward),
+                  label: const Text('Next'),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildAyahCard(Map<String, dynamic> ayah,
+      {required bool isCurrent,
+      required bool isMemorized,
+      required String label}) {
+    final bool isPracticing = isCurrent && _isPracticingCurrentAyah;
+
+    return Card(
+      margin: const EdgeInsets.symmetric(vertical: 4),
+      elevation: isCurrent ? 4 : 1,
+      // Change card background to white instead of dark
+      color: Colors.white,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: isCurrent
+            ? BorderSide(color: Theme.of(context).primaryColor, width: 2)
+            : BorderSide.none,
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: isCurrent
+                        ? Theme.of(context).primaryColor
+                        : Colors.grey.shade400,
+                    shape: BoxShape.circle,
+                  ),
+                  child: Text(
+                    '${ayah['ayahNumber']}',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                // Also update the label text color for better visibility on white background
+                Text(
+                  label,
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: isCurrent ? FontWeight.bold : FontWeight.normal,
+                    // Change to a darker color that works on white background
+                    color: isCurrent
+                        ? Theme.of(context).primaryColor
+                        : Colors.grey.shade800,
+                  ),
+                ),
+                const Spacer(),
+                if (isMemorized) Icon(Icons.check_circle, color: Colors.green),
+              ],
+            ),
+            const SizedBox(height: 16),
+
+            // Show text only if not practicing or if text should be visible
+            if (!isPracticing || _isTextVisible)
+              Text(
+                ayah['displayText'] ?? ayah['text'],
+                style: TextStyle(
+                  fontSize: isCurrent ? 26 : 20,
+                  fontFamily: 'Scheherazade',
+                  height: 1.8,
+                  // Change text color for better contrast on dark background
+                  color: Colors.black,
+                ),
+                textDirection: TextDirection.rtl,
+                textAlign: TextAlign.right,
+              ),
+
+            // Practice section shown directly in the card when practicing
+            if (isPracticing) ...[
+              const SizedBox(height: 16),
+
+              // Status text
+              Center(
+                child: Text(
+                  _recordingStatus,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ),
+
+              const SizedBox(height: 16),
+
+              // Recording controls
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  // Record button
+                  ElevatedButton(
+                    onPressed: _isPlaying
+                        ? null
+                        : (_isRecording
+                            ? () => _stopRecording(ayah)
+                            : () => _startRecording(ayah)),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor:
+                          _isRecording ? Colors.red : const Color(0xFF05668D),
+                      foregroundColor: Colors.white,
+                      // Reduce padding to make button smaller
                       padding: const EdgeInsets.all(12),
                       shape: const CircleBorder(),
                     ),
-                    child: const Icon(Icons.mic, size: 24),
+                    child: Icon(
+                      _isRecording ? Icons.stop : Icons.mic,
+                      // Reduce icon size
+                      size: 28,
+                    ),
                   ),
-                  if (isMemorized)
-                    Padding(
-                      padding: const EdgeInsets.only(left: 8.0),
-                      child: ElevatedButton(
-                        onPressed: () {
-                          setState(() {
-                            _currentAyah = ayah;
-                            _currentAyahIndex = ayahs.indexWhere((a) => 
-                              a['ayahNumber'] == ayah['ayahNumber']);
-                          });
-                        },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.deepPurple,
-                          foregroundColor: Colors.white,
-                          padding: const EdgeInsets.all(12),
-                          shape: const CircleBorder(),
-                        ),
-                        child: const Icon(Icons.replay, size: 24),
+
+                  const SizedBox(width: 20),
+
+                  // Play button (if recording exists)
+                  // Update the play button size in the row of controls
+                  if (ayah['hasRecording'] == true)
+                    ElevatedButton(
+                      onPressed: !_isRecording
+                          ? (_isPlaying
+                              ? _stopPlayback
+                              : () => _playRecording(ayah['recordingPath']))
+                          : null,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: _isPlaying
+                            ? Colors.orange
+                            : const Color(0xFF028090),
+                        foregroundColor: Colors.white,
+                        // Make padding same as record button
+                        padding: const EdgeInsets.all(12),
+                        shape: const CircleBorder(),
+                      ),
+                      child: Icon(
+                        _isPlaying ? Icons.stop : Icons.play_arrow,
+                        // Make icon size same as record button
+                        size: 28,
                       ),
                     ),
                 ],
               ),
-            ),
-        ],
+
+              // API processing status
+              if (_isProcessing) ...[
+                const SizedBox(height: 20),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const SizedBox(
+                      width: 24,
+                      height: 24,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    ),
+                    const SizedBox(width: 10),
+                    Flexible(
+                      child: Text(
+                        _apiResult ?? "Processing recitation...",
+                        style: const TextStyle(
+                          fontSize: 14,
+                          fontStyle: FontStyle.italic,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+
+              // Show transcription results if available
+              if (_transcriptions.isNotEmpty) ...[
+                const SizedBox(height: 20),
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    // Light background for container
+                    color: Colors.blue.shade50,
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: Colors.blue.shade200),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Your recitation:',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: Colors.blue.shade800,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      _buildTranscriptionWithHighlightedErrors(
+                          _transcriptions.last, ayah),
+                    ],
+                  ),
+                ),
+              ],
+            ],
+
+            // Practice/Review Button - Only show when not already practicing
+            if ((isCurrent || isMemorized) && !isPracticing)
+              Center(
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    ElevatedButton(
+                      onPressed: () {
+                        setState(() {
+                          _currentAyah = ayah;
+                          _isPracticingCurrentAyah = true;
+                          _isTextVisible = true;
+                          _transcriptions = [];
+                          // Start recording immediately
+                          _startRecording(ayah);
+                        });
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF05668D),
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.all(12),
+                        shape: const CircleBorder(),
+                      ),
+                      child: const Icon(Icons.mic, size: 24),
+                    ),
+                    if (isMemorized)
+                      Padding(
+                        padding: const EdgeInsets.only(left: 8.0),
+                        child: ElevatedButton(
+                          onPressed: () {
+                            setState(() {
+                              _currentAyah = ayah;
+                              _currentAyahIndex = ayahs.indexWhere(
+                                  (a) => a['ayahNumber'] == ayah['ayahNumber']);
+                            });
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.deepPurple,
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.all(12),
+                            shape: const CircleBorder(),
+                          ),
+                          child: const Icon(Icons.replay, size: 24),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+          ],
+        ),
       ),
-    ),
-  );
-}
+    );
+  }
 }

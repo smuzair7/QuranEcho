@@ -2,8 +2,8 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 
 class UserStatsService {
-  // Use the same base URL as auth service
-  static const String _baseUrl = 'http://192.168.100.113:3000';
+  // Use the same base URL as auth service - Updated to match auth_service.dart
+  static const String _baseUrl = 'http://192.168.100.142:3000';
   
   // Get user stats
   Future<Map<String, dynamic>> getUserStats(String userId) async {
@@ -99,7 +99,7 @@ class UserStatsService {
     }
   }
   
-  // Update user stats
+  // Update user stats - Generic method for updating stats
   Future<Map<String, dynamic>> updateUserStats(String userId, Map<String, dynamic> stats) async {
     try {
       if (userId.isEmpty) {
@@ -165,6 +165,196 @@ class UserStatsService {
         return {
           'success': false,
           'message': data['message'] ?? 'Failed to update weekly progress',
+        };
+      }
+    } catch (e) {
+      return {
+        'success': false,
+        'message': 'Error connecting to server: ${e.toString()}',
+      };
+    }
+  }
+
+  // Add time spent method to match your backend API
+  Future<Map<String, dynamic>> addTimeSpent(String userId, int timeMinutes) async {
+    try {
+      if (userId.isEmpty) {
+        print('Error: Empty user ID passed to addTimeSpent');
+        return {
+          'success': false,
+          'message': 'User ID is missing or invalid',
+        };
+      }
+      
+      final response = await http.post(
+        Uri.parse('$_baseUrl/user-stats/$userId/add-time'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'timeMinutes': timeMinutes}),
+      );
+      
+      final data = jsonDecode(response.body);
+      
+      if (response.statusCode == 200) {
+        return {
+          'success': true,
+          'data': data,
+        };
+      } else {
+        return {
+          'success': false,
+          'message': data['message'] ?? 'Failed to add time',
+        };
+      }
+    } catch (e) {
+      return {
+        'success': false,
+        'message': 'Error connecting to server: ${e.toString()}',
+      };
+    }
+  }
+
+  // Update memorized ayats
+  Future<Map<String, dynamic>> updateMemorizedAyats(String userId, int count) async {
+    try {
+      if (userId.isEmpty) {
+        print('Error: Empty user ID passed to updateMemorizedAyats');
+        return {
+          'success': false,
+          'message': 'User ID is missing or invalid',
+        };
+      }
+      
+      final response = await http.put(
+        Uri.parse('$_baseUrl/user-stats/$userId/memorized-ayats'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'count': count}),
+      );
+      
+      final data = jsonDecode(response.body);
+      
+      if (response.statusCode == 200) {
+        return {
+          'success': true,
+          'data': data,
+        };
+      } else {
+        return {
+          'success': false,
+          'message': data['message'] ?? 'Failed to update memorized ayats',
+        };
+      }
+    } catch (e) {
+      return {
+        'success': false,
+        'message': 'Error connecting to server: ${e.toString()}',
+      };
+    }
+  }
+
+  // Update memorized surahs
+  Future<Map<String, dynamic>> updateMemorizedSurahs(String userId, int count) async {
+    try {
+      if (userId.isEmpty) {
+        print('Error: Empty user ID passed to updateMemorizedSurahs');
+        return {
+          'success': false,
+          'message': 'User ID is missing or invalid',
+        };
+      }
+      
+      final response = await http.put(
+        Uri.parse('$_baseUrl/user-stats/$userId/memorized-surahs'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'count': count}),
+      );
+      
+      final data = jsonDecode(response.body);
+      
+      if (response.statusCode == 200) {
+        return {
+          'success': true,
+          'data': data,
+        };
+      } else {
+        return {
+          'success': false,
+          'message': data['message'] ?? 'Failed to update memorized surahs',
+        };
+      }
+    } catch (e) {
+      return {
+        'success': false,
+        'message': 'Error connecting to server: ${e.toString()}',
+      };
+    }
+  }
+
+  // Update surah progress
+  Future<Map<String, dynamic>> updateSurahProgress(String userId, int surahNumber, int progress) async {
+    try {
+      if (userId.isEmpty) {
+        print('Error: Empty user ID passed to updateSurahProgress');
+        return {
+          'success': false,
+          'message': 'User ID is missing or invalid',
+        };
+      }
+      
+      final response = await http.put(
+        Uri.parse('$_baseUrl/user-stats/$userId/surah-progress'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'surahNumber': surahNumber, 'progress': progress}),
+      );
+      
+      final data = jsonDecode(response.body);
+      
+      if (response.statusCode == 200) {
+        return {
+          'success': true,
+          'data': data,
+        };
+      } else {
+        return {
+          'success': false,
+          'message': data['message'] ?? 'Failed to update surah progress',
+        };
+      }
+    } catch (e) {
+      return {
+        'success': false,
+        'message': 'Error connecting to server: ${e.toString()}',
+      };
+    }
+  }
+
+  // Update streak
+  Future<Map<String, dynamic>> updateStreak(String userId, int streakDays) async {
+    try {
+      if (userId.isEmpty) {
+        print('Error: Empty user ID passed to updateStreak');
+        return {
+          'success': false,
+          'message': 'User ID is missing or invalid',
+        };
+      }
+      
+      final response = await http.put(
+        Uri.parse('$_baseUrl/user-stats/$userId/streak'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'streakDays': streakDays}),
+      );
+      
+      final data = jsonDecode(response.body);
+      
+      if (response.statusCode == 200) {
+        return {
+          'success': true,
+          'data': data,
+        };
+      } else {
+        return {
+          'success': false,
+          'message': data['message'] ?? 'Failed to update streak',
         };
       }
     } catch (e) {
