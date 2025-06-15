@@ -78,6 +78,11 @@ class _HifzPageState extends State<HifzPage> {
     _loadSurahContent();
     // Initialize session start time when the page loads
     _sessionStartTime = DateTime.now();
+    
+    // Check surah completion status when page loads
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _checkSurahCompletion();
+    });
   }
 
   @override
@@ -417,6 +422,163 @@ class _HifzPageState extends State<HifzPage> {
     return text;
   }
 
+  // NEW: Check if surah is completed and update accordingly
+  void _checkSurahCompletion() {
+    // Get the total number of ayahs in this surah from the server
+    _checkSurahCompletionFromServer();
+  }
+
+  // NEW: Check surah completion against server data
+  Future<void> _checkSurahCompletionFromServer() async {
+    try {
+      final userProvider = Provider.of<UserProvider>(context, listen: false);
+      final userId = userProvider.userId;
+      
+      if (userId == null || surahNumber == null) {
+        print('Error: User ID or surah number is null');
+        return;
+      }
+      
+      // Get current stats from server to check memorized ayahs
+      final statsResult = await _userStatsService.getUserStats(userId);
+      
+      if (statsResult['success']) {
+        final currentStats = Map<String, dynamic>.from(statsResult['data']);
+        final memorizedAyatList = Map<String, dynamic>.from(currentStats['memorizedAyatList'] ?? {});
+        
+        // Get memorized ayahs for this specific surah
+        final surahKey = surahNumber.toString();
+        final memorizedAyahsForThisSurah = List<int>.from(memorizedAyatList[surahKey] ?? []);
+        
+        // Get total ayahs in this surah
+        final totalAyahsInSurah = ayahs.length;
+        
+        print('Checking surah completion from server:');
+        print('Surah: $surahNumber');
+        print('Total ayahs in surah: $totalAyahsInSurah');
+        print('Memorized ayahs for this surah: $memorizedAyahsForThisSurah');
+        print('Memorized count: ${memorizedAyahsForThisSurah.length}');
+        
+        // Check if all ayahs are memorized (1 to totalAyahsInSurah)
+        bool allAyahsMemorized = memorizedAyahsForThisSurah.length == totalAyahsInSurah;
+        
+        // Double check by verifying each ayah number exists
+        if (allAyahsMemorized) {
+          for (int ayahNumber = 1; ayahNumber <= totalAyahsInSurah; ayahNumber++) {
+            if (!memorizedAyahsForThisSurah.contains(ayahNumber)) {
+              allAyahsMemorized = false;
+              print('Missing ayah: $ayahNumber');
+              break;
+            }
+          }
+        }
+        
+        print('All ayahs memorized: $allAyahsMemorized');
+        
+        // Check if this surah is already in the completed list
+        final memorizedSurahList = List<int>.from(currentStats['memorizedSurahList'] ?? []);
+        final isAlreadyCompleted = memorizedSurahList.contains(surahNumber);
+        
+        print('Is surah already completed: $isAlreadyCompleted');
+        
+        if (allAyahsMemorized && !isAlreadyCompleted) {
+          print('🎉 Surah completed! Updating stats...');
+          _didCompleteSurah = true;
+          
+          // Immediately update the surah completion
+          await _updateSurahCompletionStats();
+          
+          // Update UI to show completion
+          if (mounted) {
+            setState(() {
+              _recordingStatus = 'Surah completed! MashaAllah!';
+            });
+            
+            // Show completion dialog
+            _showSurahCompletionDialog();
+          }
+        } else if (allAyahsMemorized && isAlreadyCompleted) {
+          print('Surah was already completed previously');
+          // Update local UI state to show it's completed
+          if (mounted) {
+            setState(() {
+              _didCompleteSurah = true;
+            });
+          }
+        } else {
+          print('Surah not yet completed: ${memorizedAyahsForThisSurah.length}/$totalAyahsInSurah ayahs memorized');
+        }
+      } else {
+        print('Failed to get stats from server: ${statsResult['message']}');
+      }
+    } catch (e) {
+      print('Error checking surah completion from server: $e');
+    }
+  }
+
+  // NEW: Show surah completion dialog
+  void _showSurahCompletionDialog() {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => AlertDialog(
+        title: Row(
+          children: [
+            Icon(Icons.celebration, color: Colors.amber, size: 32),
+            const SizedBox(width: 8),
+            const Text('MashaAllah!'),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              'You have completed memorization of $surahName!',
+              style: const TextStyle(fontSize: 16),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 16),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.green.shade50,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.green.shade200),
+              ),
+              child: const Text(
+                '✅ Surah marked as completed in your progress!',
+                style: TextStyle(
+                  color: Colors.green,
+                  fontWeight: FontWeight.bold,
+                ),
+                textAlign: TextAlign.center,
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context);
+            },
+            child: const Text('Continue'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(context);
+              Navigator.pop(context); // Go back to surah list
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF00A896),
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Back to Surahs'),
+          ),
+        ],
+      ),
+    );
+  }
+
   void _verifyRecitationAndProgress() {
     if (_transcriptions.isEmpty) return;
 
@@ -442,7 +604,7 @@ class _HifzPageState extends State<HifzPage> {
         // Update user stats immediately when an ayah is memorized
         _updateSingleAyahStats();
         
-        // Check if surah is now completed
+        // Check if surah is now completed (this will check server data)
         _checkSurahCompletion();
       }
 
@@ -606,35 +768,17 @@ class _HifzPageState extends State<HifzPage> {
             });
           }
         }
+        
+        // After successfully adding an ayah, check if surah is now complete
+        // Add a small delay to ensure server has processed the update
+        await Future.delayed(const Duration(milliseconds: 500));
+        await _checkSurahCompletionFromServer();
+        
       } else {
         print('Failed to add memorized ayah: ${ayahResult['message']}');
       }
     } catch (e) {
       print('Error updating single ayah stats: $e');
-    }
-  }
-
-  // NEW: Check if surah is completed and update accordingly
-  void _checkSurahCompletion() {
-    // Check if all ayahs in the surah are memorized
-    bool allAyahsMemorized = true;
-    
-    for (int i = 0; i < ayahs.length; i++) {
-      if (!_memorizedAyahIndices.contains(i)) {
-        allAyahsMemorized = false;
-        break;
-      }
-    }
-    
-    print('Checking surah completion:');
-    print('Total ayahs: ${ayahs.length}');
-    print('Memorized indices: $_memorizedAyahIndices');
-    print('All ayahs memorized: $allAyahsMemorized');
-    
-    if (allAyahsMemorized && !_didCompleteSurah) {
-      _didCompleteSurah = true;
-      print('Surah completed! Updating stats...');
-      _updateSurahCompletionStats();
     }
   }
 
@@ -649,13 +793,13 @@ class _HifzPageState extends State<HifzPage> {
         return;
       }
       
-      print('Marking surah $surahNumber as completed');
+      print('🔄 Marking surah $surahNumber as completed');
       
       // Add this surah to the user's completed surahs list
       final surahResult = await _userStatsService.addMemorizedSurah(userId, surahNumber!);
       
       if (surahResult['success']) {
-        print('Successfully added memorized surah');
+        print('✅ Successfully added memorized surah to database');
         
         // Update session stats
         await _updateSessionStats();
@@ -664,6 +808,7 @@ class _HifzPageState extends State<HifzPage> {
         final updatedStatsResult = await _userStatsService.getUserStats(userId);
         if (updatedStatsResult['success']) {
           await userProvider.updateUserStats(updatedStatsResult['data']);
+          print('✅ User provider updated with new stats');
           
           if (mounted) {
             setState(() {
@@ -671,12 +816,14 @@ class _HifzPageState extends State<HifzPage> {
               _recordingStatus = 'Surah completed! MashaAllah!';
             });
           }
+        } else {
+          print('❌ Failed to refresh user stats after surah completion');
         }
       } else {
-        print('Failed to add memorized surah: ${surahResult['message']}');
+        print('❌ Failed to add memorized surah: ${surahResult['message']}');
       }
     } catch (e) {
-      print('Error updating surah completion stats: $e');
+      print('❌ Error updating surah completion stats: $e');
     }
   }
 
@@ -1066,8 +1213,8 @@ class _HifzPageState extends State<HifzPage> {
         ? ayahs[_currentAyahIndex + 1]
         : null;
 
-    // Check if surah is completed
-    final bool isSurahCompleted = _memorizedAyahIndices.length == ayahs.length;
+    // Check if surah is completed (now uses server data)
+    final bool isSurahCompleted = _didCompleteSurah;
 
     return Container(
       decoration: BoxDecoration(
@@ -1092,13 +1239,31 @@ class _HifzPageState extends State<HifzPage> {
               children: [
                 Row(
                   children: [
-                    Text(
-                      'Memorized: ${_memorizedAyahIndices.length}/${ayahs.length} Ayahs',
-                      style: const TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 16,
-                        color: Colors.white,
-                      ),
+                    FutureBuilder<Map<String, dynamic>>(
+                      future: _getServerMemorizedCount(),
+                      builder: (context, snapshot) {
+                        if (snapshot.hasData && snapshot.data!['success']) {
+                          final memorizedCount = snapshot.data!['count'] as int;
+                          return Text(
+                            'Memorized: $memorizedCount/${ayahs.length} Ayahs',
+                            style: const TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 16,
+                              color: Colors.white,
+                            ),
+                          );
+                        } else {
+                          // Fallback to local count
+                          return Text(
+                            'Memorized: ${_memorizedAyahIndices.length}/${ayahs.length} Ayahs',
+                            style: const TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 16,
+                              color: Colors.white,
+                            ),
+                          );
+                        }
+                      },
                     ),
                     if (isSurahCompleted) ...[
                       const SizedBox(width: 8),
@@ -1116,18 +1281,29 @@ class _HifzPageState extends State<HifzPage> {
                   ],
                 ),
                 const SizedBox(height: 8),
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(4),
-                  child: LinearProgressIndicator(
-                    value: ayahs.isEmpty
-                        ? 0
-                        : _memorizedAyahIndices.length / ayahs.length,
-                    backgroundColor: Colors.grey.shade800,
-                    valueColor: AlwaysStoppedAnimation<Color>(
-                      isSurahCompleted ? Colors.green : Theme.of(context).primaryColor
-                    ),
-                    minHeight: 8,
-                  ),
+                FutureBuilder<Map<String, dynamic>>(
+                  future: _getServerMemorizedCount(),
+                  builder: (context, snapshot) {
+                    double progress = 0.0;
+                    if (snapshot.hasData && snapshot.data!['success']) {
+                      final memorizedCount = snapshot.data!['count'] as int;
+                      progress = ayahs.isEmpty ? 0.0 : memorizedCount / ayahs.length;
+                    } else {
+                      progress = ayahs.isEmpty ? 0.0 : _memorizedAyahIndices.length / ayahs.length;
+                    }
+                    
+                    return ClipRRect(
+                      borderRadius: BorderRadius.circular(4),
+                      child: LinearProgressIndicator(
+                        value: progress,
+                        backgroundColor: Colors.grey.shade800,
+                        valueColor: AlwaysStoppedAnimation<Color>(
+                          isSurahCompleted ? Colors.green : Theme.of(context).primaryColor
+                        ),
+                        minHeight: 8,
+                      ),
+                    );
+                  },
                 ),
               ],
             ),
@@ -1583,5 +1759,52 @@ class _HifzPageState extends State<HifzPage> {
         ),
       ),
     );
+  }
+
+  // NEW: Get memorized count from server for this surah
+  Future<Map<String, dynamic>> _getServerMemorizedCount() async {
+    try {
+      final userProvider = Provider.of<UserProvider>(context, listen: false);
+      final userId = userProvider.userId;
+      
+      if (userId == null || surahNumber == null) {
+        return {'success': false, 'count': 0};
+      }
+      
+      final statsResult = await _userStatsService.getUserStats(userId);
+      
+      if (statsResult['success']) {
+        final currentStats = Map<String, dynamic>.from(statsResult['data']);
+        final memorizedAyatList = Map<String, dynamic>.from(currentStats['memorizedAyatList'] ?? {});
+        
+        final surahKey = surahNumber.toString();
+        final memorizedAyahsForThisSurah = List<int>.from(memorizedAyatList[surahKey] ?? []);
+        
+        // Also check if surah is completed
+        final memorizedSurahList = List<int>.from(currentStats['memorizedSurahList'] ?? []);
+        final isCompleted = memorizedSurahList.contains(surahNumber);
+        
+        // Update local completion state
+        if (isCompleted && !_didCompleteSurah) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (mounted) {
+              setState(() {
+                _didCompleteSurah = true;
+              });
+            }
+          });
+        }
+        
+        return {
+          'success': true, 
+          'count': memorizedAyahsForThisSurah.length,
+          'isCompleted': isCompleted
+        };
+      }
+    } catch (e) {
+      print('Error getting server memorized count: $e');
+    }
+    
+    return {'success': false, 'count': 0, 'isCompleted': false};
   }
 }
