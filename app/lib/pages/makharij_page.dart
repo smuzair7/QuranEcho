@@ -73,8 +73,8 @@ class _MakharijPageState extends State<MakharijPage> {
   };
 
  // API variables
-  static const String _tarteelApiToken = "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";
-  static const String _tarteelApiUrl = "https://router.huggingface.co/hf-inference/models/tarteel-ai/whisper-base-ar-quran";
+  static const String _tarteelApiToken = "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";
+  static const String _tarteelApiUrl = "https://vb1pti1yhtwgtlth.us-east-1.aws.endpoints.huggingface.cloud";
 
 // Map Arabic letters to their most common transcription patterns
 final Map<String, List<String>> _letterToTranscriptionPatterns = {
@@ -269,7 +269,7 @@ final Map<String, List<String>> _letterToTranscriptionPatterns = {
 
     try {
       // First, use the custom model for primary analysis
-      final Uri url = Uri.parse('http://51.21.250.47:5000/analyze_harf');
+      final Uri url = Uri.parse('http://51.20.135.55:5000/analyze_harf');
       
       // Add more detailed logging
       print('Sending audio file: $_recordingPath');

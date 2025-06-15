@@ -15,3 +15,8 @@ Werkzeug==2.2.3
 Jinja2==3.1.6
 itsdangerous==2.2.0
 click==8.1.8
+torch==2.3.0
+transformers==4.40.0
+fastdtw==0.3.4
+dtaidistance==2.3.10
+matplotlib==3.7.1

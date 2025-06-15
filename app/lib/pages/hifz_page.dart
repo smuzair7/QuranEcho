@@ -10,6 +10,9 @@ import 'package:http/http.dart' as http;
 import 'package:queue/queue.dart';
 import 'dart:math' as math;
 import 'package:QuranEcho/pages/revision_page.dart';
+import 'package:provider/provider.dart';
+import 'package:QuranEcho/services/user_stats_service.dart';
+import 'package:QuranEcho/services/user_provider.dart';
 
 class HifzPage extends StatefulWidget {
   const HifzPage({super.key});
@@ -35,9 +38,9 @@ class _HifzPageState extends State<HifzPage> {
   String _recordingStatus = 'Tap to start recording';
 
   // API variables
-  static const String _apiToken = "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";
+  static const String _apiToken = "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";
   static const String _apiUrl =
-      "https://router.huggingface.co/hf-inference/models/tarteel-ai/whisper-base-ar-quran";
+      "https://vb1pti1yhtwgtlth.us-east-1.aws.endpoints.huggingface.cloud";
   bool _isProcessing = false;
   String? _apiResult;
   List<String> _transcriptions = [];
@@ -63,10 +66,18 @@ class _HifzPageState extends State<HifzPage> {
   // Text visibility during recording
   bool _isTextVisible = true;
 
+  // User stats variables
+  final UserStatsService _userStatsService = UserStatsService();
+  bool _didCompleteSurah = false;
+  DateTime? _sessionStartTime;
+  int _newlyMemorizedAyahs = 0;
+
   @override
   void initState() {
     super.initState();
     _loadSurahContent();
+    // Initialize session start time when the page loads
+    _sessionStartTime = DateTime.now();
   }
 
   @override
@@ -424,6 +435,10 @@ class _HifzPageState extends State<HifzPage> {
 
       if (isPassed && !_memorizedAyahIndices.contains(_currentAyahIndex)) {
         _memorizedAyahIndices.add(_currentAyahIndex);
+        _newlyMemorizedAyahs++; // Increment newly memorized ayahs count
+        
+        // Update user stats immediately when an ayah is memorized
+        _updateUserStats();
       }
 
       // Always show text after recitation for review
@@ -455,7 +470,10 @@ class _HifzPageState extends State<HifzPage> {
         _recordingStatus = 'Tap to start recording';
       });
     } else {
-      // Reached end of surah
+      // Reached end of surah - mark as completed
+      _didCompleteSurah = true;
+      _updateUserStats(); // Final stats update for surah completion
+      
       showDialog(
         context: context,
         builder: (context) => AlertDialog(
@@ -627,6 +645,137 @@ class _HifzPageState extends State<HifzPage> {
       textDirection: TextDirection.rtl,
       text: TextSpan(children: textSpans),
     );
+  }
+
+  Future<void> _updateUserStats() async {
+    try {
+      final userProvider = Provider.of<UserProvider>(context, listen: false);
+      final userId = userProvider.userId;
+      
+      if (userId == null) {
+        print('Error: User ID is null, cannot update stats');
+        return;
+      }
+      
+      print('Updating user stats for user: $userId');
+      print('Newly memorized ayahs in this session: $_newlyMemorizedAyahs');
+      
+      // Calculate session time
+      final sessionTimeMinutes = _sessionStartTime != null 
+          ? DateTime.now().difference(_sessionStartTime!).inMinutes 
+          : 0;
+      
+      // Get current stats first
+      final statsResult = await _userStatsService.getUserStats(userId);
+      
+      if (statsResult['success']) {
+        final currentStats = Map<String, dynamic>.from(statsResult['data']);
+        print('Current stats from server: $currentStats');
+        
+        // Calculate new values - only add newly memorized ayahs from this session
+        final currentMemorizedAyats = currentStats['memorizedAyats'] ?? 0;
+        final newMemorizedAyatsTotal = currentMemorizedAyats + _newlyMemorizedAyahs;
+        
+        // Update memorized ayats if there are newly memorized ones
+        if (_newlyMemorizedAyahs > 0) {
+          print('Updating memorized ayats from $currentMemorizedAyats to $newMemorizedAyatsTotal');
+          
+          final ayatsResult = await _userStatsService.updateMemorizedAyats(userId, newMemorizedAyatsTotal);
+          if (ayatsResult['success']) {
+            print('Successfully updated memorized ayats');
+            
+            // Reset the newly memorized counter since we've updated the server
+            _newlyMemorizedAyahs = 0;
+          } else {
+            print('Failed to update memorized ayats: ${ayatsResult['message']}');
+          }
+        }
+        
+        // Update memorized surahs if surah was completed
+        if (_didCompleteSurah) {
+          final currentMemorizedSurahs = currentStats['memorizedSurahs'] ?? 0;
+          final newMemorizedSurahsTotal = currentMemorizedSurahs + 1;
+          
+          print('Updating memorized surahs from $currentMemorizedSurahs to $newMemorizedSurahsTotal');
+          
+          final surahsResult = await _userStatsService.updateMemorizedSurahs(userId, newMemorizedSurahsTotal);
+          if (surahsResult['success']) {
+            print('Successfully updated memorized surahs');
+            _didCompleteSurah = false; // Reset flag
+          } else {
+            print('Failed to update memorized surahs: ${surahsResult['message']}');
+          }
+        }
+        
+        // Add time spent if session time > 0
+        if (sessionTimeMinutes > 0) {
+          print('Adding $sessionTimeMinutes minutes to time spent');
+          
+          final timeResult = await _userStatsService.addTimeSpent(userId, sessionTimeMinutes);
+          if (timeResult['success']) {
+            print('Successfully added time spent');
+            // Reset session start time
+            _sessionStartTime = DateTime.now();
+          } else {
+            print('Failed to add time spent: ${timeResult['message']}');
+          }
+        }
+        
+        // Update weekly progress for today - only if we have newly memorized ayahs
+        final now = DateTime.now();
+        final dayIndex = now.weekday - 1; // Monday = 0, Sunday = 6
+        
+        if (_memorizedAyahIndices.isNotEmpty) {
+          print('Updating weekly progress for day $dayIndex');
+          
+          final currentWeeklyProgress = List<int>.from(currentStats['weeklyProgress'] ?? [0, 0, 0, 0, 0, 0, 0]);
+          final todaysProgress = currentWeeklyProgress[dayIndex] + 1; // Add 1 for this ayah
+          
+          final weeklyResult = await _userStatsService.updateWeeklyProgress(
+            userId, 
+            dayIndex, 
+            todaysProgress
+          );
+          if (!weeklyResult['success']) {
+            print('Failed to update weekly progress: ${weeklyResult['message']}');
+          }
+        }
+        
+        // Update surah progress if applicable
+        if (surahNumber != null) {
+          final progressPercentage = (_memorizedAyahIndices.length / ayahs.length * 100).round();
+          print('Updating surah $surahNumber progress to $progressPercentage%');
+          
+          final progressResult = await _userStatsService.updateSurahProgress(
+            userId, 
+            surahNumber!, 
+            progressPercentage
+          );
+          if (!progressResult['success']) {
+            print('Failed to update surah progress: ${progressResult['message']}');
+          }
+        }
+        
+        // Get updated stats and refresh UserProvider
+        final updatedStatsResult = await _userStatsService.getUserStats(userId);
+        if (updatedStatsResult['success']) {
+          await userProvider.updateUserStats(updatedStatsResult['data']);
+          print('Successfully updated all user stats!');
+          
+          // Force a rebuild
+          if (mounted) {
+            setState(() {
+              // Just triggering a rebuild
+            });
+          }
+        }
+      } else {
+        print('Failed to get current stats: ${statsResult['message']}');
+      }
+    } catch (e) {
+      print('Error updating stats: $e');
+      print('Stack trace: ${StackTrace.current}');
+    }
   }
 
   @override

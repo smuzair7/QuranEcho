@@ -57,8 +57,8 @@ class _RevisionPageState extends State<RevisionPage> with SingleTickerProviderSt
   bool _isTextVisible = true;
 
   // API variables
-  static const String _apiToken = "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";
-  static const String _apiUrl = "https://router.huggingface.co/hf-inference/models/tarteel-ai/whisper-base-ar-quran";
+  static const String _apiToken = "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";
+  static const String _apiUrl = "https://vb1pti1yhtwgtlth.us-east-1.aws.endpoints.huggingface.cloud";
   bool _isProcessing = false;
   String? _apiResult;
   List<String> _transcriptions = [];

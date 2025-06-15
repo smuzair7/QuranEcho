@@ -54,7 +54,40 @@ class _ReadQuranPageState extends State<ReadQuranPage> {
       debugPrint(
           'JSON data parsed successfully, contains ${quranData.length} entries');
 
-      final int surahNumber = widget.surahInfo['surahNumber'];
+      // Extract the actual surahInfo object if it's nested
+      final Map<String, dynamic> actualSurahInfo =
+          widget.surahInfo.containsKey('surahInfo')
+              ? widget.surahInfo['surahInfo']
+              : widget.surahInfo;
+
+      debugPrint('Extracted surahInfo: $actualSurahInfo');
+
+      // Add null check and type conversion for surahNumber
+      final dynamic rawSurahNumber = actualSurahInfo['surahNumber'];
+      if (rawSurahNumber == null) {
+        setState(() {
+          isLoading = false;
+          errorMessage = 'Surah number is missing';
+        });
+        debugPrint('Error: Surah number is null in actualSurahInfo: $actualSurahInfo');
+        return;
+      }
+
+      // Convert to int if needed
+      final int surahNumber = rawSurahNumber is int
+          ? rawSurahNumber
+          : int.tryParse(rawSurahNumber.toString()) ?? 0;
+
+      if (surahNumber <= 0 || surahNumber > 114) {
+        setState(() {
+          isLoading = false;
+          errorMessage = 'Invalid surah number: $surahNumber';
+        });
+        debugPrint('Error: Invalid surah number: $surahNumber');
+        return;
+      }
+
+      debugPrint('Processing surah number: $surahNumber');
 
       // Get the selected surah data
       final Map<String, dynamic>? surahData = quranData[surahNumber.toString()];
@@ -103,10 +136,16 @@ class _ReadQuranPageState extends State<ReadQuranPage> {
 
   @override
   Widget build(BuildContext context) {
+    // Extract the actual surahInfo object if it's nested
+    final Map<String, dynamic> actualSurahInfo =
+        widget.surahInfo.containsKey('surahInfo')
+            ? widget.surahInfo['surahInfo']
+            : widget.surahInfo;
+
     return Scaffold(
       appBar: AppBar(
         title: Text(
-            '${widget.surahInfo['surahName']} (${widget.surahInfo['arabicName']})'),
+            '${actualSurahInfo['surahName']} (${actualSurahInfo['arabicName']})'),
         backgroundColor: const Color(0xFF00A896),
         foregroundColor: Colors.white,
       ),
@@ -151,8 +190,14 @@ class _ReadQuranPageState extends State<ReadQuranPage> {
   }
 
   Widget _buildSurahContent() {
+    // Extract the actual surahInfo object if it's nested
+    final Map<String, dynamic> actualSurahInfo =
+        widget.surahInfo.containsKey('surahInfo')
+            ? widget.surahInfo['surahInfo']
+            : widget.surahInfo;
+
     // Check if we should show Bismillah (not shown for Surah 1 or Surah 9)
-    final int surahNumber = widget.surahInfo['surahNumber'];
+    final int surahNumber = actualSurahInfo['surahNumber'];
     final shouldShowBismillah = surahNumber != 1 && surahNumber != 9;
 
     // Add this debug statement
@@ -188,7 +233,7 @@ class _ReadQuranPageState extends State<ReadQuranPage> {
               child: Column(
                 children: [
                   Text(
-                    widget.surahInfo['arabicName'],
+                    actualSurahInfo['arabicName'],
                     style: const TextStyle(
                       fontSize: 28,
                       fontWeight: FontWeight.bold,
@@ -198,14 +243,14 @@ class _ReadQuranPageState extends State<ReadQuranPage> {
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    'Surah ${widget.surahInfo['surahNumber']}: ${widget.surahInfo['surahName']}',
+                    'Surah ${actualSurahInfo['surahNumber']}: ${actualSurahInfo['surahName']}',
                     style: const TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.w500,
                     ),
                   ),
                   Text(
-                    '${widget.surahInfo['ayahCount']} Ayahs',
+                    '${actualSurahInfo['ayahCount']} Ayahs',
                     style: TextStyle(
                       fontSize: 14,
                       color: Theme.of(context)
@@ -283,7 +328,7 @@ class _ReadQuranPageState extends State<ReadQuranPage> {
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(
                             content: Text(
-                                '${widget.surahInfo['surahName']} bookmarked')),
+                                '${actualSurahInfo['surahName']} bookmarked')),
                       );
                     },
                   ),

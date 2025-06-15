@@ -73,27 +73,18 @@ class UserProvider with ChangeNotifier {
     }
   }
 
- // Update the login method to correctly store the user ID
-
-Future<void> login(String username, [String? userId, Map<String, dynamic>? stats]) async {
-  print('Login called - Username: $username, UserID: $userId');
-  
-  _username = username;
-  
-  // Make sure we're storing the user ID properly
-  if (userId != null && userId.isNotEmpty) {
+  Future<void> login(String username, [String? userId, Map<String, dynamic>? stats]) async {
+    print('Login called - Username: $username, UserID: $userId');
+    
+    _username = username;
+    // Store the MongoDB ObjectId from login response
     _userId = userId;
-    print('Setting user ID: $_userId');
-  } else {
-    print('Warning: No user ID provided during login');
+    _userStats = stats;
+    
+    // Save to persistent storage
+    await _saveUserSession();
+    notifyListeners();
   }
-  
-  _userStats = stats;
-  
-  // Save to persistent storage
-  await _saveUserSession();
-  notifyListeners();
-}
 
   Future<void> logout() async {
     _username = null;
