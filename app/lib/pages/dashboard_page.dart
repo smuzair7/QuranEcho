@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../services/user_provider.dart';
 import '../services/user_stats_service.dart';
 import 'login_page.dart';
+import 'surah_progress_page.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'dart:math' as math;
 
@@ -252,6 +253,92 @@ class _DashboardPageState extends State<DashboardPage> {
     }
   }
   
+  // Add method to get dynamic achievements based on user stats
+  List<Map<String, dynamic>> _getAchievements() {
+    return [
+      {
+        'icon': Icons.auto_stories,
+        'title': 'First Step',
+        'description': 'Memorize your first ayat',
+        'isCompleted': _memorizedAyats >= 1,
+        'progress': _memorizedAyats >= 1 ? 1.0 : _memorizedAyats / 1.0,
+        'requirement': 1,
+        'current': _memorizedAyats,
+        'type': 'ayats'
+      },
+      {
+        'icon': Icons.book,
+        'title': 'Ayat Collector',
+        'description': 'Memorize 10 ayats',
+        'isCompleted': _memorizedAyats >= 10,
+        'progress': _memorizedAyats >= 10 ? 1.0 : _memorizedAyats / 10.0,
+        'requirement': 10,
+        'current': _memorizedAyats,
+        'type': 'ayats'
+      },
+      {
+        'icon': Icons.bookmark,
+        'title': 'Surah Beginner',
+        'description': 'Complete your first surah',
+        'isCompleted': _memorizedSurahs >= 1,
+        'progress': _memorizedSurahs >= 1 ? 1.0 : _memorizedSurahs / 1.0,
+        'requirement': 1,
+        'current': _memorizedSurahs,
+        'type': 'surahs'
+      },
+      {
+        'icon': Icons.library_books,
+        'title': 'Surah Master',
+        'description': 'Complete 5 surahs',
+        'isCompleted': _memorizedSurahs >= 5,
+        'progress': _memorizedSurahs >= 5 ? 1.0 : _memorizedSurahs / 5.0,
+        'requirement': 5,
+        'current': _memorizedSurahs,
+        'type': 'surahs'
+      },
+      {
+        'icon': Icons.local_fire_department,
+        'title': 'Consistent Learner',
+        'description': 'Maintain a 7-day streak',
+        'isCompleted': _streakDays >= 7,
+        'progress': _streakDays >= 7 ? 1.0 : _streakDays / 7.0,
+        'requirement': 7,
+        'current': _streakDays,
+        'type': 'streak'
+      },
+      {
+        'icon': Icons.timer,
+        'title': 'Time Devotee',
+        'description': 'Spend 5+ hours learning',
+        'isCompleted': _timeSpentMinutes >= 300,
+        'progress': _timeSpentMinutes >= 300 ? 1.0 : _timeSpentMinutes / 300.0,
+        'requirement': 300,
+        'current': _timeSpentMinutes,
+        'type': 'time'
+      },
+      {
+        'icon': Icons.military_tech,
+        'title': 'Hifz Scholar',
+        'description': 'Complete 10 surahs',
+        'isCompleted': _memorizedSurahs >= 10,
+        'progress': _memorizedSurahs >= 10 ? 1.0 : _memorizedSurahs / 10.0,
+        'requirement': 10,
+        'current': _memorizedSurahs,
+        'type': 'surahs'
+      },
+      {
+        'icon': Icons.stars,
+        'title': 'Dedication Master',
+        'description': 'Memorize 50+ ayats',
+        'isCompleted': _memorizedAyats >= 50,
+        'progress': _memorizedAyats >= 50 ? 1.0 : _memorizedAyats / 50.0,
+        'requirement': 50,
+        'current': _memorizedAyats,
+        'type': 'ayats'
+      },
+    ];
+  }
+
   @override
   Widget build(BuildContext context) {
     final userProvider = Provider.of<UserProvider>(context);
@@ -547,11 +634,19 @@ class _DashboardPageState extends State<DashboardPage> {
                         icon: Icons.auto_stories,
                         color: const Color(0xFF00A896),
                       ),
-                      _buildStatCard(
+                      _buildClickableStatCard(
                         title: 'Completed Surahs',
                         value: _memorizedSurahs.toString(),
                         icon: Icons.bookmark,
                         color: const Color(0xFF05668D),
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => const SurahProgressPage(),
+                            ),
+                          );
+                        },
                       ),
                       _buildStatCard(
                         title: 'Time Spent',
@@ -707,32 +802,16 @@ class _DashboardPageState extends State<DashboardPage> {
                       borderRadius: BorderRadius.circular(15),
                     ),
                     child: Column(
-                      children: [
-                        _buildAchievementItem(
-                          icon: Icons.star,
-                          title: 'First Step',
-                          description: 'Memorized your first ayat',
-                          isCompleted: true,
-                        ),
-                        _buildAchievementItem(
-                          icon: Icons.book,
-                          title: 'Surah Completer',
-                          description: 'Memorized an entire surah',
-                          isCompleted: true,
-                        ),
-                        _buildAchievementItem(
-                          icon: Icons.local_fire_department,
-                          title: 'Week Streak',
-                          description: 'Used the app for 7 days in a row',
-                          isCompleted: true,
-                        ),
-                        _buildAchievementItem(
-                          icon: Icons.military_tech,
-                          title: 'Hifz Master',
-                          description: 'Memorize 10 surahs',
-                          isCompleted: false,
-                        ),
-                      ],
+                      children: _getAchievements().map((achievement) => _buildAchievementItem(
+                        icon: achievement['icon'],
+                        title: achievement['title'],
+                        description: achievement['description'],
+                        isCompleted: achievement['isCompleted'],
+                        progress: achievement['progress'],
+                        requirement: achievement['requirement'],
+                        current: achievement['current'],
+                        type: achievement['type'],
+                      )).toList(),
                     ),
                   ),
                   
@@ -853,59 +932,208 @@ class _DashboardPageState extends State<DashboardPage> {
     );
   }
   
+  Widget _buildClickableStatCard({
+    required String title,
+    required String value,
+    required IconData icon,
+    required Color color,
+    required VoidCallback onTap,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(15),
+      child: Card(
+        elevation: 2,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(15),
+        ),
+        color: const Color(0xFF1E1E1E),
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Icon(
+                    icon,
+                    size: 30,
+                    color: color,
+                  ),
+                  Icon(
+                    Icons.arrow_forward_ios,
+                    size: 16,
+                    color: Colors.grey[400],
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              Text(
+                value,
+                style: const TextStyle(
+                  fontSize: 22,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                title,
+                style: TextStyle(
+                  fontSize: 14,
+                  color: Colors.grey[400],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+  
   Widget _buildAchievementItem({
     required IconData icon,
     required String title,
     required String description,
     required bool isCompleted,
+    required double progress,
+    required int requirement,
+    required int current,
+    required String type,
   }) {
+    String progressText = '';
+    if (!isCompleted) {
+      switch (type) {
+        case 'ayats':
+          progressText = '$current/$requirement ayats';
+          break;
+        case 'surahs':
+          progressText = '$current/$requirement surahs';
+          break;
+        case 'streak':
+          progressText = '$current/$requirement days';
+          break;
+        case 'time':
+          final hours = current ~/ 60;
+          final reqHours = requirement ~/ 60;
+          progressText = '${hours}h/${reqHours}h';
+          break;
+      }
+    }
+
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8.0),
-      child: Row(
-        children: [
-          Container(
-            width: 40,
-            height: 40,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: isCompleted
-                  ? const Color(0xFF00A896).withOpacity(0.2)
-                  : Colors.grey.withOpacity(0.2),
+      child: Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: isCompleted 
+                ? const Color(0xFF00A896).withOpacity(0.3)
+                : Colors.grey.withOpacity(0.2),
+            width: 1,
+          ),
+          color: isCompleted 
+              ? const Color(0xFF00A896).withOpacity(0.1)
+              : Colors.transparent,
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 50,
+              height: 50,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: isCompleted
+                    ? const Color(0xFF00A896).withOpacity(0.2)
+                    : Colors.grey.withOpacity(0.2),
+              ),
+              child: Stack(
+                alignment: Alignment.center,
+                children: [
+                  if (!isCompleted)
+                    CircularProgressIndicator(
+                      value: progress,
+                      strokeWidth: 3,
+                      backgroundColor: Colors.grey.withOpacity(0.3),
+                      valueColor: AlwaysStoppedAnimation<Color>(
+                        const Color(0xFF00A896).withOpacity(0.7),
+                      ),
+                    ),
+                  Icon(
+                    icon,
+                    color: isCompleted ? const Color(0xFF00A896) : Colors.grey,
+                    size: 24,
+                  ),
+                ],
+              ),
             ),
-            child: Icon(
-              icon,
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          title,
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16,
+                            color: isCompleted ? Colors.white : Colors.grey[300],
+                          ),
+                        ),
+                      ),
+                      if (isCompleted)
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF00A896),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: const Text(
+                            'UNLOCKED',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 10,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    description,
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: Colors.grey[400],
+                    ),
+                  ),
+                  if (!isCompleted && progressText.isNotEmpty) ...[
+                    const SizedBox(height: 4),
+                    Text(
+                      progressText,
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: const Color(0xFF00A896),
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+            Icon(
+              isCompleted ? Icons.check_circle : Icons.circle_outlined,
               color: isCompleted ? const Color(0xFF00A896) : Colors.grey,
-              size: 20,
+              size: 24,
             ),
-          ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 16,
-                    color: isCompleted ? Colors.white : Colors.grey,
-                  ),
-                ),
-                Text(
-                  description,
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: Colors.grey[400],
-                  ),
-                ),
-              ],
-            ),
-          ),
-          Icon(
-            isCompleted ? Icons.check_circle : Icons.circle_outlined,
-            color: isCompleted ? const Color(0xFF00A896) : Colors.grey,
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
