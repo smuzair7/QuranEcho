@@ -384,7 +384,10 @@ app.route('/user-stats/:userId/memorized-ayats')
         return res.status(404).json({ message: 'User stats not found' });
       }
       
-      res.json({ memorizedAyats: userStats.memorizedAyats });
+      res.json({ 
+        memorizedAyats: userStats.memorizedAyats,
+        memorizedAyatList: userStats.memorizedAyatList || {}
+      });
     } catch (error) {
       console.error('Error getting memorized ayats:', error);
       res.status(500).json({ message: 'Server error getting memorized ayats' });
@@ -392,15 +395,15 @@ app.route('/user-stats/:userId/memorized-ayats')
   })
   .put(async (req, res) => {
     try {
-      const { count } = req.body;
+      const { surahNumber, ayahNumber } = req.body;
       const userId = req.params.userId;
   
       if (!isValidObjectId(userId)) {
         return res.status(400).json({ message: 'Invalid user ID format' });
       }
   
-      if (count === undefined || typeof count !== 'number' || count < 0) {
-        return res.status(400).json({ message: 'Count must be a non-negative number' });
+      if (!surahNumber || !ayahNumber || surahNumber < 1 || surahNumber > 114 || ayahNumber < 1) {
+        return res.status(400).json({ message: 'Valid surah number and ayah number are required' });
       }
   
       const userStats = await UserStats.findOne({ userId });
@@ -408,7 +411,29 @@ app.route('/user-stats/:userId/memorized-ayats')
         return res.status(404).json({ message: 'User stats not found' });
       }
   
-      userStats.memorizedAyats = count;
+      // Initialize memorizedAyatList if it doesn't exist
+      if (!userStats.memorizedAyatList) {
+        userStats.memorizedAyatList = new Map();
+      }
+      
+      const surahKey = surahNumber.toString();
+      let surahAyats = userStats.memorizedAyatList.get(surahKey) || [];
+      
+      // Check if this ayah is already memorized
+      if (!surahAyats.includes(ayahNumber)) {
+        // Add the new ayah
+        surahAyats.push(ayahNumber);
+        userStats.memorizedAyatList.set(surahKey, surahAyats);
+        
+        // Increment total count only for new ayahs
+        userStats.memorizedAyats += 1;
+        
+        console.log(`Added new ayah: Surah ${surahNumber}, Ayah ${ayahNumber}. Total: ${userStats.memorizedAyats}`);
+      } else {
+        console.log(`Ayah already memorized: Surah ${surahNumber}, Ayah ${ayahNumber}. No count change.`);
+      }
+      
+      userStats.markModified('memorizedAyatList');
       userStats.lastUpdated = new Date();
       userStats.lastActivityDate = new Date();
       await userStats.save();
@@ -437,6 +462,7 @@ app.route('/user-stats/:userId/memorized-ayats')
         return res.status(404).json({ message: 'User stats not found' });
       }
   
+      // This is for direct count setting (backwards compatibility)
       userStats.memorizedAyats = count;
       userStats.lastUpdated = new Date();
       userStats.lastActivityDate = new Date();
@@ -463,7 +489,10 @@ app.route('/user-stats/:userId/memorized-surahs')
         return res.status(404).json({ message: 'User stats not found' });
       }
       
-      res.json({ memorizedSurahs: userStats.memorizedSurahs });
+      res.json({ 
+        memorizedSurahs: userStats.memorizedSurahs,
+        memorizedSurahList: userStats.memorizedSurahList || []
+      });
     } catch (error) {
       console.error('Error getting memorized surahs:', error);
       res.status(500).json({ message: 'Server error getting memorized surahs' });
@@ -471,15 +500,15 @@ app.route('/user-stats/:userId/memorized-surahs')
   })
   .put(async (req, res) => {
     try {
-      const { count } = req.body;
+      const { surahNumber } = req.body;
       const userId = req.params.userId;
   
       if (!isValidObjectId(userId)) {
         return res.status(400).json({ message: 'Invalid user ID format' });
       }
   
-      if (count === undefined || typeof count !== 'number' || count < 0) {
-        return res.status(400).json({ message: 'Count must be a non-negative number' });
+      if (!surahNumber || surahNumber < 1 || surahNumber > 114) {
+        return res.status(400).json({ message: 'Valid surah number is required (1-114)' });
       }
   
       const userStats = await UserStats.findOne({ userId });
@@ -487,7 +516,25 @@ app.route('/user-stats/:userId/memorized-surahs')
         return res.status(404).json({ message: 'User stats not found' });
       }
   
-      userStats.memorizedSurahs = count;
+      // Initialize memorizedSurahList if it doesn't exist
+      if (!userStats.memorizedSurahList) {
+        userStats.memorizedSurahList = [];
+      }
+      
+      // Check if this surah is already memorized
+      if (!userStats.memorizedSurahList.includes(surahNumber)) {
+        // Add the new surah
+        userStats.memorizedSurahList.push(surahNumber);
+        
+        // Increment total count only for new surahs
+        userStats.memorizedSurahs += 1;
+        
+        console.log(`Added new surah: ${surahNumber}. Total: ${userStats.memorizedSurahs}`);
+      } else {
+        console.log(`Surah already memorized: ${surahNumber}. No count change.`);
+      }
+      
+      userStats.markModified('memorizedSurahList');
       userStats.lastUpdated = new Date();
       userStats.lastActivityDate = new Date();
       await userStats.save();
@@ -516,6 +563,7 @@ app.route('/user-stats/:userId/memorized-surahs')
         return res.status(404).json({ message: 'User stats not found' });
       }
   
+      // This is for direct count setting (backwards compatibility)
       userStats.memorizedSurahs = count;
       userStats.lastUpdated = new Date();
       userStats.lastActivityDate = new Date();

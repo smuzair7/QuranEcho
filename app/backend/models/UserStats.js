@@ -1,5 +1,5 @@
 const mongoose = require('mongoose');
-const Schema = mongoose.Schema;
+const { Schema } = mongoose;
 
 const userStatsSchema = new Schema({
   userId: {
@@ -9,6 +9,7 @@ const userStatsSchema = new Schema({
     unique: true,
     index: true
   },
+  // Total count
   memorizedAyats: {
     type: Number,
     default: 0
@@ -17,11 +18,32 @@ const userStatsSchema = new Schema({
     type: Number,
     default: 0
   },
-  // Change from Map to Object type
+
+  /**
+   * Tracks individual ayats memorized
+   * Format: { surahNumber: [ayatNumber1, ayatNumber2, ...] }
+   */
+  memorizedAyatList: {
+    type: Map,
+    of: [Number], // array of ayat numbers
+    default: {}
+  },
+
+  /**
+   * Tracks individual surahs completed
+   * Array of surah numbers that have been fully memorized
+   */
+  memorizedSurahList: {
+    type: [Number],
+    default: []
+  },
+
+  // This could track completion percentage or ayats of each surah being worked on
   surahProgress: {
     type: Object,
     default: {},
   },
+
   timeSpentMinutes: {
     type: Number,
     default: 0
@@ -47,8 +69,5 @@ const userStatsSchema = new Schema({
     default: Date.now
   }
 });
-
-// Create index for faster queries
-userStatsSchema.index({ userId: 1 });
 
 module.exports = mongoose.model('UserStats', userStatsSchema);
