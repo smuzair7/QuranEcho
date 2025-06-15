@@ -437,8 +437,13 @@ class _HifzPageState extends State<HifzPage> {
         _memorizedAyahIndices.add(_currentAyahIndex);
         _newlyMemorizedAyahs++; // Increment newly memorized ayahs count
         
+        print('Ayah memorized! Current memorized indices: $_memorizedAyahIndices');
+        
         // Update user stats immediately when an ayah is memorized
-        _updateUserStats();
+        _updateSingleAyahStats();
+        
+        // Check if surah is now completed
+        _checkSurahCompletion();
       }
 
       // Always show text after recitation for review
@@ -449,14 +454,6 @@ class _HifzPageState extends State<HifzPage> {
           ? 'Great ($matchScore% match)'
           : 'Try again ($matchScore% match)';
     });
-
-    // Automatically move to next ayah if recitation is correct
-    // if (isPassed) {
-    //   // Add a small delay to show the success message before moving
-    //   Future.delayed(const Duration(seconds: 2), () {
-    //     _moveToNextAyah();
-    //   });
-    // }
   }
 
   void _moveToNextAyah() {
@@ -470,16 +467,16 @@ class _HifzPageState extends State<HifzPage> {
         _recordingStatus = 'Tap to start recording';
       });
     } else {
-      // Reached end of surah - mark as completed
-      _didCompleteSurah = true;
-      _updateUserStats(); // Final stats update for surah completion
+      // Reached end of surah - check if fully completed
+      _checkSurahCompletion();
       
       showDialog(
         context: context,
         builder: (context) => AlertDialog(
           title: const Text('Congratulations!'),
-          content: const Text(
-              'You have completed memorization of this surah. MashaAllah!'),
+          content: Text(_didCompleteSurah 
+              ? 'You have completed memorization of this surah. MashaAllah!'
+              : 'You have reached the end of this surah. Complete all ayahs to mark the surah as memorized.'),
           actions: [
             TextButton(
               onPressed: () {
@@ -569,6 +566,178 @@ class _HifzPageState extends State<HifzPage> {
     });
   }
 
+  // NEW: Update stats for a single memorized ayah
+  Future<void> _updateSingleAyahStats() async {
+    try {
+      final userProvider = Provider.of<UserProvider>(context, listen: false);
+      final userId = userProvider.userId;
+      
+      if (userId == null || _currentAyah == null) {
+        print('Error: User ID or current ayah is null');
+        return;
+      }
+      
+      final currentAyahNumber = _currentAyah!['ayahNumber'];
+      
+      print('Adding memorized ayah: Surah $surahNumber, Ayah $currentAyahNumber');
+      
+      // Add this specific ayah to the user's memorized list
+      final ayahResult = await _userStatsService.addMemorizedAyah(
+        userId, 
+        surahNumber!, 
+        currentAyahNumber
+      );
+      
+      if (ayahResult['success']) {
+        print('Successfully added memorized ayah');
+        
+        // Update session time and weekly progress
+        await _updateSessionStats();
+        
+        // Refresh user provider with updated stats
+        final updatedStatsResult = await _userStatsService.getUserStats(userId);
+        if (updatedStatsResult['success']) {
+          await userProvider.updateUserStats(updatedStatsResult['data']);
+          
+          // Force a rebuild
+          if (mounted) {
+            setState(() {
+              _newlyMemorizedAyahs = 0; // Reset since we've updated the server
+            });
+          }
+        }
+      } else {
+        print('Failed to add memorized ayah: ${ayahResult['message']}');
+      }
+    } catch (e) {
+      print('Error updating single ayah stats: $e');
+    }
+  }
+
+  // NEW: Check if surah is completed and update accordingly
+  void _checkSurahCompletion() {
+    // Check if all ayahs in the surah are memorized
+    bool allAyahsMemorized = true;
+    
+    for (int i = 0; i < ayahs.length; i++) {
+      if (!_memorizedAyahIndices.contains(i)) {
+        allAyahsMemorized = false;
+        break;
+      }
+    }
+    
+    print('Checking surah completion:');
+    print('Total ayahs: ${ayahs.length}');
+    print('Memorized indices: $_memorizedAyahIndices');
+    print('All ayahs memorized: $allAyahsMemorized');
+    
+    if (allAyahsMemorized && !_didCompleteSurah) {
+      _didCompleteSurah = true;
+      print('Surah completed! Updating stats...');
+      _updateSurahCompletionStats();
+    }
+  }
+
+  // NEW: Update stats when surah is completed
+  Future<void> _updateSurahCompletionStats() async {
+    try {
+      final userProvider = Provider.of<UserProvider>(context, listen: false);
+      final userId = userProvider.userId;
+      
+      if (userId == null || surahNumber == null) {
+        print('Error: User ID or surah number is null');
+        return;
+      }
+      
+      print('Marking surah $surahNumber as completed');
+      
+      // Add this surah to the user's completed surahs list
+      final surahResult = await _userStatsService.addMemorizedSurah(userId, surahNumber!);
+      
+      if (surahResult['success']) {
+        print('Successfully added memorized surah');
+        
+        // Update session stats
+        await _updateSessionStats();
+        
+        // Refresh user provider with updated stats
+        final updatedStatsResult = await _userStatsService.getUserStats(userId);
+        if (updatedStatsResult['success']) {
+          await userProvider.updateUserStats(updatedStatsResult['data']);
+          
+          if (mounted) {
+            setState(() {
+              // Show completion message
+              _recordingStatus = 'Surah completed! MashaAllah!';
+            });
+          }
+        }
+      } else {
+        print('Failed to add memorized surah: ${surahResult['message']}');
+      }
+    } catch (e) {
+      print('Error updating surah completion stats: $e');
+    }
+  }
+
+  // NEW: Update session-related stats (time, weekly progress, surah progress)
+  Future<void> _updateSessionStats() async {
+    try {
+      final userProvider = Provider.of<UserProvider>(context, listen: false);
+      final userId = userProvider.userId;
+      
+      if (userId == null) return;
+      
+      // Calculate session time
+      final sessionTimeMinutes = _sessionStartTime != null 
+          ? DateTime.now().difference(_sessionStartTime!).inMinutes 
+          : 0;
+      
+      // Add time spent if session time > 0
+      if (sessionTimeMinutes > 0) {
+        final timeResult = await _userStatsService.addTimeSpent(userId, sessionTimeMinutes);
+        if (timeResult['success']) {
+          // Reset session start time
+          _sessionStartTime = DateTime.now();
+        }
+      }
+      
+      // Update weekly progress for today
+      final now = DateTime.now();
+      final dayIndex = now.weekday - 1; // Monday = 0, Sunday = 6
+      
+      // Get current stats to update weekly progress correctly
+      final statsResult = await _userStatsService.getUserStats(userId);
+      if (statsResult['success']) {
+        final currentStats = statsResult['data'];
+        final currentWeeklyProgress = List<int>.from(currentStats['weeklyProgress'] ?? [0, 0, 0, 0, 0, 0, 0]);
+        final todaysProgress = currentWeeklyProgress[dayIndex] + 1; // Add 1 for this ayah
+        
+        await _userStatsService.updateWeeklyProgress(userId, dayIndex, todaysProgress);
+      }
+      
+      // Update surah progress if applicable
+      if (surahNumber != null) {
+        final progressPercentage = (_memorizedAyahIndices.length / ayahs.length * 100).round();
+        await _userStatsService.updateSurahProgress(userId, surahNumber!, progressPercentage);
+      }
+    } catch (e) {
+      print('Error updating session stats: $e');
+    }
+  }
+
+  // UPDATED: Simplified main update method (keeping for backward compatibility)
+  Future<void> _updateUserStats() async {
+    // This now just calls the appropriate specific update methods
+    if (_newlyMemorizedAyahs > 0) {
+      await _updateSingleAyahStats();
+    }
+    
+    if (_didCompleteSurah) {
+      await _updateSurahCompletionStats();
+    }
+  }
+
   String _prepareTextForComparison(String text) {
     // Instead of removing diacritics, only normalize alef forms
     // and perform other basic normalizations
@@ -645,137 +814,6 @@ class _HifzPageState extends State<HifzPage> {
       textDirection: TextDirection.rtl,
       text: TextSpan(children: textSpans),
     );
-  }
-
-  Future<void> _updateUserStats() async {
-    try {
-      final userProvider = Provider.of<UserProvider>(context, listen: false);
-      final userId = userProvider.userId;
-      
-      if (userId == null) {
-        print('Error: User ID is null, cannot update stats');
-        return;
-      }
-      
-      print('Updating user stats for user: $userId');
-      print('Newly memorized ayahs in this session: $_newlyMemorizedAyahs');
-      
-      // Calculate session time
-      final sessionTimeMinutes = _sessionStartTime != null 
-          ? DateTime.now().difference(_sessionStartTime!).inMinutes 
-          : 0;
-      
-      // Get current stats first
-      final statsResult = await _userStatsService.getUserStats(userId);
-      
-      if (statsResult['success']) {
-        final currentStats = Map<String, dynamic>.from(statsResult['data']);
-        print('Current stats from server: $currentStats');
-        
-        // Calculate new values - only add newly memorized ayahs from this session
-        final currentMemorizedAyats = currentStats['memorizedAyats'] ?? 0;
-        final newMemorizedAyatsTotal = currentMemorizedAyats + _newlyMemorizedAyahs;
-        
-        // Update memorized ayats if there are newly memorized ones
-        if (_newlyMemorizedAyahs > 0) {
-          print('Updating memorized ayats from $currentMemorizedAyats to $newMemorizedAyatsTotal');
-          
-          final ayatsResult = await _userStatsService.updateMemorizedAyats(userId, newMemorizedAyatsTotal);
-          if (ayatsResult['success']) {
-            print('Successfully updated memorized ayats');
-            
-            // Reset the newly memorized counter since we've updated the server
-            _newlyMemorizedAyahs = 0;
-          } else {
-            print('Failed to update memorized ayats: ${ayatsResult['message']}');
-          }
-        }
-        
-        // Update memorized surahs if surah was completed
-        if (_didCompleteSurah) {
-          final currentMemorizedSurahs = currentStats['memorizedSurahs'] ?? 0;
-          final newMemorizedSurahsTotal = currentMemorizedSurahs + 1;
-          
-          print('Updating memorized surahs from $currentMemorizedSurahs to $newMemorizedSurahsTotal');
-          
-          final surahsResult = await _userStatsService.updateMemorizedSurahs(userId, newMemorizedSurahsTotal);
-          if (surahsResult['success']) {
-            print('Successfully updated memorized surahs');
-            _didCompleteSurah = false; // Reset flag
-          } else {
-            print('Failed to update memorized surahs: ${surahsResult['message']}');
-          }
-        }
-        
-        // Add time spent if session time > 0
-        if (sessionTimeMinutes > 0) {
-          print('Adding $sessionTimeMinutes minutes to time spent');
-          
-          final timeResult = await _userStatsService.addTimeSpent(userId, sessionTimeMinutes);
-          if (timeResult['success']) {
-            print('Successfully added time spent');
-            // Reset session start time
-            _sessionStartTime = DateTime.now();
-          } else {
-            print('Failed to add time spent: ${timeResult['message']}');
-          }
-        }
-        
-        // Update weekly progress for today - only if we have newly memorized ayahs
-        final now = DateTime.now();
-        final dayIndex = now.weekday - 1; // Monday = 0, Sunday = 6
-        
-        if (_memorizedAyahIndices.isNotEmpty) {
-          print('Updating weekly progress for day $dayIndex');
-          
-          final currentWeeklyProgress = List<int>.from(currentStats['weeklyProgress'] ?? [0, 0, 0, 0, 0, 0, 0]);
-          final todaysProgress = currentWeeklyProgress[dayIndex] + 1; // Add 1 for this ayah
-          
-          final weeklyResult = await _userStatsService.updateWeeklyProgress(
-            userId, 
-            dayIndex, 
-            todaysProgress
-          );
-          if (!weeklyResult['success']) {
-            print('Failed to update weekly progress: ${weeklyResult['message']}');
-          }
-        }
-        
-        // Update surah progress if applicable
-        if (surahNumber != null) {
-          final progressPercentage = (_memorizedAyahIndices.length / ayahs.length * 100).round();
-          print('Updating surah $surahNumber progress to $progressPercentage%');
-          
-          final progressResult = await _userStatsService.updateSurahProgress(
-            userId, 
-            surahNumber!, 
-            progressPercentage
-          );
-          if (!progressResult['success']) {
-            print('Failed to update surah progress: ${progressResult['message']}');
-          }
-        }
-        
-        // Get updated stats and refresh UserProvider
-        final updatedStatsResult = await _userStatsService.getUserStats(userId);
-        if (updatedStatsResult['success']) {
-          await userProvider.updateUserStats(updatedStatsResult['data']);
-          print('Successfully updated all user stats!');
-          
-          // Force a rebuild
-          if (mounted) {
-            setState(() {
-              // Just triggering a rebuild
-            });
-          }
-        }
-      } else {
-        print('Failed to get current stats: ${statsResult['message']}');
-      }
-    } catch (e) {
-      print('Error updating stats: $e');
-      print('Stack trace: ${StackTrace.current}');
-    }
   }
 
   @override
@@ -1028,6 +1066,9 @@ class _HifzPageState extends State<HifzPage> {
         ? ayahs[_currentAyahIndex + 1]
         : null;
 
+    // Check if surah is completed
+    final bool isSurahCompleted = _memorizedAyahIndices.length == ayahs.length;
+
     return Container(
       decoration: BoxDecoration(
         gradient: LinearGradient(
@@ -1045,17 +1086,34 @@ class _HifzPageState extends State<HifzPage> {
           Container(
             width: double.infinity,
             padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
-            color: const Color(0xFF212121),
+            color: isSurahCompleted ? Colors.green.shade800 : const Color(0xFF212121),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Text(
-                  'Memorized: ${_memorizedAyahIndices.length}/${ayahs.length} Ayahs',
-                  style: const TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 16,
-                    color: Colors.white,
-                  ),
+                Row(
+                  children: [
+                    Text(
+                      'Memorized: ${_memorizedAyahIndices.length}/${ayahs.length} Ayahs',
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                        color: Colors.white,
+                      ),
+                    ),
+                    if (isSurahCompleted) ...[
+                      const SizedBox(width: 8),
+                      Icon(Icons.check_circle, color: Colors.white, size: 20),
+                      const SizedBox(width: 4),
+                      Text(
+                        'COMPLETED!',
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 14,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ],
+                  ],
                 ),
                 const SizedBox(height: 8),
                 ClipRRect(
@@ -1065,6 +1123,9 @@ class _HifzPageState extends State<HifzPage> {
                         ? 0
                         : _memorizedAyahIndices.length / ayahs.length,
                     backgroundColor: Colors.grey.shade800,
+                    valueColor: AlwaysStoppedAnimation<Color>(
+                      isSurahCompleted ? Colors.green : Theme.of(context).primaryColor
+                    ),
                     minHeight: 8,
                   ),
                 ),

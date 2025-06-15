@@ -244,7 +244,7 @@ final Map<String, List<String>> _letterToTranscriptionPatterns = {
 
     try {
       // First, use the custom model for primary analysis
-      final Uri url = Uri.parse('http://51.21.250.47:5000/analyze_harf');
+      final Uri url = Uri.parse('http://51.20.135.55:5000/analyze_harf');
       
       // Add more detailed logging
       print('Sending audio file: $_recordingPath');

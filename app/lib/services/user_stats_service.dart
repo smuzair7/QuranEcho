@@ -213,7 +213,45 @@ class UserStatsService {
     }
   }
 
-  // Update memorized ayats
+  // Add memorized ayah - NEW: Add specific ayah instead of total count
+  Future<Map<String, dynamic>> addMemorizedAyah(String userId, int surahNumber, int ayahNumber) async {
+    try {
+      if (userId.isEmpty) {
+        print('Error: Empty user ID passed to addMemorizedAyah');
+        return {
+          'success': false,
+          'message': 'User ID is missing or invalid',
+        };
+      }
+      
+      final response = await http.put(
+        Uri.parse('$_baseUrl/user-stats/$userId/memorized-ayats'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'surahNumber': surahNumber, 'ayahNumber': ayahNumber}),
+      );
+      
+      final data = jsonDecode(response.body);
+      
+      if (response.statusCode == 200) {
+        return {
+          'success': true,
+          'data': data,
+        };
+      } else {
+        return {
+          'success': false,
+          'message': data['message'] ?? 'Failed to add memorized ayah',
+        };
+      }
+    } catch (e) {
+      return {
+        'success': false,
+        'message': 'Error connecting to server: ${e.toString()}',
+      };
+    }
+  }
+
+  // Update memorized ayats (backwards compatibility)
   Future<Map<String, dynamic>> updateMemorizedAyats(String userId, int count) async {
     try {
       if (userId.isEmpty) {
@@ -224,7 +262,7 @@ class UserStatsService {
         };
       }
       
-      final response = await http.put(
+      final response = await http.post(
         Uri.parse('$_baseUrl/user-stats/$userId/memorized-ayats'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({'count': count}),
@@ -251,7 +289,45 @@ class UserStatsService {
     }
   }
 
-  // Update memorized surahs
+  // Add memorized surah - NEW: Add specific surah instead of total count
+  Future<Map<String, dynamic>> addMemorizedSurah(String userId, int surahNumber) async {
+    try {
+      if (userId.isEmpty) {
+        print('Error: Empty user ID passed to addMemorizedSurah');
+        return {
+          'success': false,
+          'message': 'User ID is missing or invalid',
+        };
+      }
+      
+      final response = await http.put(
+        Uri.parse('$_baseUrl/user-stats/$userId/memorized-surahs'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'surahNumber': surahNumber}),
+      );
+      
+      final data = jsonDecode(response.body);
+      
+      if (response.statusCode == 200) {
+        return {
+          'success': true,
+          'data': data,
+        };
+      } else {
+        return {
+          'success': false,
+          'message': data['message'] ?? 'Failed to add memorized surah',
+        };
+      }
+    } catch (e) {
+      return {
+        'success': false,
+        'message': 'Error connecting to server: ${e.toString()}',
+      };
+    }
+  }
+
+  // Update memorized surahs (backwards compatibility)
   Future<Map<String, dynamic>> updateMemorizedSurahs(String userId, int count) async {
     try {
       if (userId.isEmpty) {
@@ -262,7 +338,7 @@ class UserStatsService {
         };
       }
       
-      final response = await http.put(
+      final response = await http.post(
         Uri.parse('$_baseUrl/user-stats/$userId/memorized-surahs'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({'count': count}),
