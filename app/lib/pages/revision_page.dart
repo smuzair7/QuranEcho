@@ -9,6 +9,7 @@ import 'package:queue/queue.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as path;
 import 'dart:async';
+import 'package:QuranEcho/config/app_config.dart';
 
 class RevisionPage extends StatefulWidget {
   final List<Map<String, dynamic>> ayahs;
@@ -57,8 +58,8 @@ class _RevisionPageState extends State<RevisionPage> with SingleTickerProviderSt
   bool _isTextVisible = true;
 
   // API variables
-  static const String _apiToken = "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";
-  static const String _apiUrl = "https://vb1pti1yhtwgtlth.us-east-1.aws.endpoints.huggingface.cloud";
+  String get _apiToken => AppConfig.huggingFaceApiToken;
+  String get _apiUrl => AppConfig.tarteelApiUrl;
   bool _isProcessing = false;
   String? _apiResult;
   List<String> _transcriptions = [];

@@ -13,6 +13,7 @@ import 'package:QuranEcho/pages/revision_page.dart';
 import 'package:provider/provider.dart';
 import 'package:QuranEcho/services/user_stats_service.dart';
 import 'package:QuranEcho/services/user_provider.dart';
+import 'package:QuranEcho/config/app_config.dart';
 
 class HifzPage extends StatefulWidget {
   const HifzPage({super.key});
@@ -38,9 +39,8 @@ class _HifzPageState extends State<HifzPage> {
   String _recordingStatus = 'Tap to start recording';
 
   // API variables
-  static const String _apiToken = "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";
-  static const String _apiUrl =
-      "https://vb1pti1yhtwgtlth.us-east-1.aws.endpoints.huggingface.cloud";
+  String get _apiToken => AppConfig.huggingFaceApiToken;
+  String get _apiUrl => AppConfig.tarteelApiUrl;
   bool _isProcessing = false;
   String? _apiResult;
   List<String> _transcriptions = [];

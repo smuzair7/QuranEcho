@@ -9,6 +9,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as path;
 import 'package:http/http.dart' as http;
 import 'dart:math' as math;
+import 'package:QuranEcho/config/app_config.dart';
 
 // Add this class at the top level (not inside any other class)
 class TarteelVerificationResult {
@@ -72,9 +73,9 @@ class _MakharijPageState extends State<MakharijPage> {
     'ظ': 'Zua' // 27
   };
 
- // API variables
-  static const String _tarteelApiToken = "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";
-  static const String _tarteelApiUrl = "https://vb1pti1yhtwgtlth.us-east-1.aws.endpoints.huggingface.cloud";
+  // API variables
+  String get _tarteelApiToken => AppConfig.huggingFaceApiToken;
+  String get _tarteelApiUrl => AppConfig.tarteelApiUrl;
 
 // Map Arabic letters to their most common transcription patterns
 final Map<String, List<String>> _letterToTranscriptionPatterns = {

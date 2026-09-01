@@ -16,10 +16,12 @@ import 'services/user_provider.dart';
 import 'pages/hifz_select_surah_page.dart';
 import 'package:QuranEcho/services/api_service.dart';
 import 'package:QuranEcho/services/sync_service.dart';
+import 'package:QuranEcho/config/app_config.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await SharedPreferences.getInstance(); // Initialize shared preferences
+  await AppConfig.load();
   
   // Try to initialize the API service at startup
   await ApiService.initialize();

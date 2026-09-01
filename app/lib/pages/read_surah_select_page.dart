@@ -8,6 +8,7 @@ import 'package:just_audio/just_audio.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as path;
 import 'package:http/http.dart' as http;
+import 'package:QuranEcho/config/app_config.dart';
 
 class ReadSurahSelectPage extends StatefulWidget {
   const ReadSurahSelectPage({super.key});
@@ -151,9 +152,8 @@ class _ReadSurahSelectPageState extends State<ReadSurahSelectPage> {
   String _voiceSearchStatus = 'Tap microphone to search by voice';
 
   // API variables for transcription
-  static const String _apiToken = "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";
-  static const String _apiUrl =
-      "https://vb1pti1yhtwgtlth.us-east-1.aws.endpoints.huggingface.cloud";
+  String get _apiToken => AppConfig.huggingFaceApiToken;
+  String get _apiUrl => AppConfig.tarteelApiUrl;
   bool _isProcessing = false;
   String? _apiResult;
   List<String> _transcriptions = [];
