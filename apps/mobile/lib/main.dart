@@ -17,6 +17,7 @@ import 'pages/hifz_select_surah_page.dart';
 import 'package:QuranEcho/services/api_service.dart';
 import 'package:QuranEcho/services/sync_service.dart';
 import 'package:QuranEcho/config/app_config.dart';
+import 'package:QuranEcho/theme/app_theme.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -45,24 +46,8 @@ class QuranEchoApp extends StatelessWidget {
     return MaterialApp(
       title: 'Quran Echo',
       debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        primarySwatch: Colors.teal,
-        fontFamily: 'Scheherazade', // Uncommented since font will be added
-        brightness: Brightness.light,
-        useMaterial3: true,
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: const Color(0xFF1F8A70),
-          brightness: Brightness.light,
-        ),
-      ),
-      darkTheme: ThemeData(
-        brightness: Brightness.dark,
-        useMaterial3: true,
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: const Color(0xFF1F8A70),
-          brightness: Brightness.dark,
-        ),
-      ),
+      theme: AppTheme.light(),
+      darkTheme: AppTheme.dark(),
       themeMode: ThemeMode.system,
       
       routes: {

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../theme/app_theme.dart';
 
 class HifzSelectSurahPage extends StatefulWidget {
   const HifzSelectSurahPage({super.key});
@@ -154,80 +155,76 @@ class _HifzSelectSurahPageState extends State<HifzSelectSurahPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Select Surah'),
-        backgroundColor: const Color(0xFF00A896),
-        foregroundColor: Colors.white,
-        elevation: 0,
-      ),
+      backgroundColor: AppColors.parchment,
+      appBar: AppBar(title: const Text('Select a surah')),
       body: Column(
         children: [
           // Search bar
           Padding(
-            padding: const EdgeInsets.all(16.0),
+            padding: const EdgeInsets.all(AppSpacing.md),
             child: TextField(
               onChanged: _filterSurahs,
-              decoration: InputDecoration(
-                hintText: 'Search surah...',
-                prefixIcon: const Icon(Icons.search),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide(color: Colors.grey.shade300),
-                ),
-                enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide(color: Colors.grey.shade300),
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: const BorderSide(color: Color(0xFF00A896), width: 2),
-                ),
-                filled: true,
-                fillColor: Colors.grey.shade100,
+              decoration: const InputDecoration(
+                hintText: 'Search surah',
+                prefixIcon: Icon(Icons.search_rounded),
               ),
             ),
           ),
 
           // List of surahs
           Expanded(
-            child: ListView.builder(
+            child: ListView.separated(
+              padding: const EdgeInsets.fromLTRB(
+                AppSpacing.md,
+                0,
+                AppSpacing.md,
+                AppSpacing.md,
+              ),
               itemCount: _filteredSurahs.length,
+              separatorBuilder: (context, index) => const SizedBox(height: AppSpacing.sm),
               itemBuilder: (context, index) {
                 final surah = _filteredSurahs[index];
                 return Card(
-                  margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-                  elevation: 2,
                   child: ListTile(
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: AppSpacing.md,
+                      vertical: 4,
+                    ),
+                    shape: RoundedRectangleBorder(borderRadius: AppRadius.mdBorder),
                     leading: CircleAvatar(
-                      backgroundColor: const Color(0xFF00A896),
-                      foregroundColor: Colors.white,
-                      child: Text(surah['number'].toString()),
+                      backgroundColor: AppColors.palmSoft,
+                      foregroundColor: AppColors.palm,
+                      child: Text(
+                        surah['number'].toString(),
+                        style: const TextStyle(fontWeight: FontWeight.bold),
+                      ),
                     ),
                     title: Text(
                       surah['name'],
                       style: const TextStyle(
-                        fontWeight: FontWeight.bold,
+                        fontWeight: FontWeight.w600,
                         fontSize: 16,
                       ),
                     ),
                     subtitle: Text(
-                      "${surah['ayahs']} Ayahs",
+                      "${surah['ayahs']} ayahs",
                       style: const TextStyle(
                         fontSize: 12,
-                        color: Colors.grey,
+                        color: AppColors.inkSoft,
                       ),
                     ),
                     trailing: Text(
                       surah['arabicName'],
                       style: const TextStyle(
-                        fontSize: 18,
-                        fontFamily: 'Scheherazade',
+                        fontSize: 20,
+                        fontFamily: 'Amiri Quran',
+                        color: AppColors.ink,
                       ),
                       textDirection: TextDirection.rtl,
                     ),
                     onTap: () {
                       Navigator.pushNamed(
-                        context, 
+                        context,
                         '/hifz',
                         arguments: {
                           'surahNumber': surah['number'],

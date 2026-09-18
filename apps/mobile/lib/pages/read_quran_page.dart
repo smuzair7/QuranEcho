@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import '../theme/app_theme.dart';
 
 class ReadQuranPage extends StatefulWidget {
   final Map<String, dynamic> surahInfo;
@@ -146,8 +147,6 @@ class _ReadQuranPageState extends State<ReadQuranPage> {
       appBar: AppBar(
         title: Text(
             '${actualSurahInfo['surahName']} (${actualSurahInfo['arabicName']})'),
-        backgroundColor: const Color(0xFF00A896),
-        foregroundColor: Colors.white,
       ),
       body: isLoading
           ? const Center(child: CircularProgressIndicator())
@@ -160,19 +159,23 @@ class _ReadQuranPageState extends State<ReadQuranPage> {
   Widget _buildErrorView() {
     return Center(
       child: Padding(
-        padding: const EdgeInsets.all(20.0),
+        padding: const EdgeInsets.all(AppSpacing.lg),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(Icons.error_outline, size: 60, color: Colors.red),
-            const SizedBox(height: 16),
-            const Text(
+            const Icon(Icons.error_outline, size: 60, color: AppColors.clay),
+            const SizedBox(height: AppSpacing.md),
+            Text(
               'Failed to load surah content',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              style: Theme.of(context).textTheme.titleMedium,
             ),
-            const SizedBox(height: 8),
-            Text(errorMessage, textAlign: TextAlign.center),
-            const SizedBox(height: 16),
+            const SizedBox(height: AppSpacing.sm),
+            Text(
+              errorMessage,
+              textAlign: TextAlign.center,
+              style: const TextStyle(color: AppColors.inkSoft),
+            ),
+            const SizedBox(height: AppSpacing.md),
             ElevatedButton(
               onPressed: () {
                 setState(() {
@@ -204,95 +207,65 @@ class _ReadQuranPageState extends State<ReadQuranPage> {
     debugPrint(
         'Surah number: $surahNumber, Should show bismillah: $shouldShowBismillah');
 
-    return Container(
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [
-            const Color(0xFF00A896).withOpacity(0.1),
-            Colors.white,
-          ],
-        ),
-      ),
-      child: SingleChildScrollView(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            // Surah Header
-            Container(
-              margin: const EdgeInsets.only(bottom: 20),
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: const Color(0xFF00A896).withOpacity(0.1),
-                borderRadius: BorderRadius.circular(12),
-                border:
-                    Border.all(color: const Color(0xFF00A896).withOpacity(0.3)),
-              ),
-              child: Column(
-                children: [
-                  Text(
-                    actualSurahInfo['arabicName'],
-                    style: const TextStyle(
-                      fontSize: 28,
-                      fontWeight: FontWeight.bold,
-                      fontFamily: 'Scheherazade',
-                    ),
-                    textDirection: TextDirection.rtl,
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Surah ${actualSurahInfo['surahNumber']}: ${actualSurahInfo['surahName']}',
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                  Text(
-                    '${actualSurahInfo['ayahCount']} Ayahs',
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: Theme.of(context)
-                          .colorScheme
-                          .onSurface
-                          .withOpacity(0.7),
-                    ),
-                  ),
-                ],
-              ),
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(AppSpacing.md),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          // Surah header
+          Container(
+            margin: const EdgeInsets.only(bottom: AppSpacing.md),
+            padding: const EdgeInsets.all(AppSpacing.md),
+            decoration: BoxDecoration(
+              color: AppColors.palmSoft,
+              borderRadius: AppRadius.mdBorder,
             ),
-
-            // Continuous surah text container
-            Container(
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(12),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.05),
-                    blurRadius: 10,
-                    offset: const Offset(0, 5),
+            child: Column(
+              children: [
+                Text(
+                  actualSurahInfo['arabicName'],
+                  style: const TextStyle(
+                    fontSize: 28,
+                    fontFamily: 'Amiri Quran',
+                    color: AppColors.palmDeep,
                   ),
-                ],
-              ),
+                  textDirection: TextDirection.rtl,
+                ),
+                const SizedBox(height: AppSpacing.sm),
+                Text(
+                  'Surah ${actualSurahInfo['surahNumber']}: ${actualSurahInfo['surahName']}',
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
+                Text(
+                  '${actualSurahInfo['ayahCount']} ayahs',
+                  style: const TextStyle(
+                    fontSize: 14,
+                    color: AppColors.inkSoft,
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          // Continuous surah text
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.all(AppSpacing.lg),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   // Bismillah header - only show for surahs other than Fatiha and Tawbah
                   if (shouldShowBismillah)
                     const Padding(
-                      padding: EdgeInsets.only(bottom: 24),
+                      padding: EdgeInsets.only(bottom: AppSpacing.lg),
                       child: Text(
                         'بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ',
                         textDirection: TextDirection.rtl,
                         textAlign: TextAlign.center,
                         style: TextStyle(
-                          fontSize: 28,
-                          fontFamily: 'Scheherazade',
-                          fontWeight: FontWeight.bold,
-                          color: Color(0xFF00A896),
+                          fontSize: 26,
+                          fontFamily: 'Amiri Quran',
+                          color: AppColors.palm,
                           height: 1.8,
                         ),
                       ),
@@ -304,9 +277,9 @@ class _ReadQuranPageState extends State<ReadQuranPage> {
                     text: TextSpan(
                       style: const TextStyle(
                         fontSize: 24,
-                        fontFamily: 'Scheherazade',
-                        color: Colors.black,
-                        height: 1.8,
+                        fontFamily: 'Amiri Quran',
+                        color: AppColors.ink,
+                        height: 1.9,
                       ),
                       children: _buildAyahTextSpans(),
                     ),
@@ -314,55 +287,55 @@ class _ReadQuranPageState extends State<ReadQuranPage> {
                 ],
               ),
             ),
+          ),
 
-            // Actions row at bottom
-            Padding(
-              padding: const EdgeInsets.only(top: 20),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  IconButton(
-                    icon: const Icon(Icons.bookmark_outline),
-                    tooltip: 'Bookmark this surah',
-                    onPressed: () {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                            content: Text(
-                                '${actualSurahInfo['surahName']} bookmarked')),
-                      );
-                    },
-                  ),
-                  const SizedBox(width: 16),
-                  IconButton(
-                    icon: const Icon(Icons.content_copy),
-                    tooltip: 'Copy surah text',
-                    onPressed: () {
-                      final allText = ayahs
-                          .map((ayah) => ayah['plainText'] ?? ayah['text'])
-                          .join(' ');
-                      Clipboard.setData(ClipboardData(text: allText));
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                            content: Text('Surah text copied to clipboard')),
-                      );
-                    },
-                  ),
-                  const SizedBox(width: 16),
-                  IconButton(
-                    icon: const Icon(Icons.share),
-                    tooltip: 'Share surah',
-                    onPressed: () {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                            content: Text('Sharing functionality coming soon')),
-                      );
-                    },
-                  ),
-                ],
-              ),
+          // Actions row at bottom
+          Padding(
+            padding: const EdgeInsets.only(top: AppSpacing.md),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                IconButton(
+                  icon: const Icon(Icons.bookmark_outline),
+                  tooltip: 'Bookmark this surah',
+                  onPressed: () {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                          content: Text(
+                              '${actualSurahInfo['surahName']} bookmarked')),
+                    );
+                  },
+                ),
+                const SizedBox(width: AppSpacing.md),
+                IconButton(
+                  icon: const Icon(Icons.content_copy),
+                  tooltip: 'Copy surah text',
+                  onPressed: () {
+                    final allText = ayahs
+                        .map((ayah) => ayah['plainText'] ?? ayah['text'])
+                        .join(' ');
+                    Clipboard.setData(ClipboardData(text: allText));
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                          content: Text('Surah text copied to clipboard')),
+                    );
+                  },
+                ),
+                const SizedBox(width: AppSpacing.md),
+                IconButton(
+                  icon: const Icon(Icons.share),
+                  tooltip: 'Share surah',
+                  onPressed: () {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                          content: Text('Sharing functionality coming soon')),
+                    );
+                  },
+                ),
+              ],
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
@@ -378,20 +351,18 @@ class _ReadQuranPageState extends State<ReadQuranPage> {
         WidgetSpan(
           alignment: PlaceholderAlignment.middle,
           child: Container(
-            margin: const EdgeInsets.symmetric(horizontal: 4),
-            padding: const EdgeInsets.all(4),
-            decoration: BoxDecoration(
-              color: const Color(0xFF00A896),
+            margin: const EdgeInsets.symmetric(horizontal: AppSpacing.xs),
+            padding: const EdgeInsets.all(AppSpacing.xs),
+            decoration: const BoxDecoration(
+              color: AppColors.palmSoft,
               shape: BoxShape.circle,
-              border: Border.all(color: Colors.white, width: 1),
             ),
             child: Text(
               toArabicNumerals(ayah['ayahNumber']),
               style: const TextStyle(
-                color: Colors.white,
+                color: AppColors.palmDeep,
                 fontSize: 10,
-                fontWeight: FontWeight.bold,
-                fontFamily: 'Scheherazade',
+                fontFamily: 'Amiri Quran',
               ),
             ),
           ),

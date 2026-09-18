@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'makharij_page.dart';
+import '../theme/app_theme.dart';
 
 class MakharijLettersPage extends StatefulWidget {
   const MakharijLettersPage({super.key});
@@ -87,12 +88,10 @@ class _MakharijLettersPageState extends State<MakharijLettersPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text("Makharij Letters"),
-        backgroundColor: Colors.orange,
-      ),
+      backgroundColor: AppColors.parchment,
+      appBar: AppBar(title: const Text('Makharij letters')),
       body: Padding(
-        padding: const EdgeInsets.all(24),
+        padding: const EdgeInsets.all(AppSpacing.lg),
         child: Column(
           children: [
             Expanded(
@@ -100,8 +99,8 @@ class _MakharijLettersPageState extends State<MakharijLettersPage> {
                 gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                   crossAxisCount: 3,
                   childAspectRatio: 1.2,
-                  crossAxisSpacing: 16,
-                  mainAxisSpacing: 16,
+                  crossAxisSpacing: AppSpacing.md,
+                  mainAxisSpacing: AppSpacing.md,
                 ),
                 itemCount: letters.length,
                 itemBuilder: (context, index) {
@@ -109,41 +108,37 @@ class _MakharijLettersPageState extends State<MakharijLettersPage> {
                   return ElevatedButton(
                     style: ElevatedButton.styleFrom(
                       backgroundColor:
-                          isSelected ? Colors.orange[800] : Colors.orange,
-                      foregroundColor: Colors.white,
+                          isSelected ? AppColors.palm : AppColors.card,
+                      foregroundColor:
+                          isSelected ? AppColors.parchment : AppColors.ink,
+                      elevation: 0,
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
+                        borderRadius: AppRadius.mdBorder,
+                        side: BorderSide(
+                          color: isSelected ? AppColors.palm : AppColors.line,
+                        ),
                       ),
-                      elevation: isSelected ? 4 : 2,
                     ),
                     onPressed: () => selectLetter(index),
                     child: Text(
                       letters[index],
-                      style:
-                          Theme.of(context).textTheme.headlineMedium?.copyWith(
-                                fontWeight: FontWeight.bold,
-                              ),
+                      style: TextStyle(
+                        fontFamily: 'Amiri Quran',
+                        fontSize: 30,
+                        fontWeight: FontWeight.bold,
+                        color: isSelected ? AppColors.parchment : AppColors.ink,
+                      ),
                     ),
                   );
                 },
               ),
             ),
-            const SizedBox(height: 20),
+            const SizedBox(height: AppSpacing.lg),
             SizedBox(
               width: double.infinity,
               child: ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.orange[900],
-                  foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  textStyle: const TextStyle(
-                      fontSize: 18, fontWeight: FontWeight.bold),
-                ),
                 onPressed: navigateToQuiz,
-                child: const Text("Take Quiz"),
+                child: const Text('Take quiz'),
               ),
             ),
           ],
@@ -192,7 +187,7 @@ class _MakharijPracticePageState extends State<MakharijPracticePage> {
     23, // Wao (index 23)
     24  // Yaa (index 24)
   ];
-  
+
   // Your existing code follows...
   final List<String> letters = [
     'ع', // 0 - Aain
@@ -249,36 +244,27 @@ class _MakharijPracticePageState extends State<MakharijPracticePage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text("Makharij Letters"),
-        backgroundColor: const Color(0xFF1F8A70),
-        foregroundColor: Colors.white,
-        elevation: 0,
-      ),
+      backgroundColor: AppColors.parchment,
+      appBar: AppBar(title: const Text('Makharij letters')),
       body: Padding(
-        padding: const EdgeInsets.all(24),
+        padding: const EdgeInsets.all(AppSpacing.lg),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Text(
-              'Practice Pronunciation',
-              style: TextStyle(
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
-                color: Theme.of(context).colorScheme.onSurface,
-              ),
+              'Practice pronunciation',
+              style: Theme.of(context).textTheme.headlineMedium,
               textAlign: TextAlign.center,
             ),
-            const SizedBox(height: 20),
+            const SizedBox(height: AppSpacing.xs),
             Text(
               'Select a letter to study its pronunciation point',
-              style: TextStyle(
-                fontSize: 16,
-                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
-              ),
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: AppColors.inkSoft,
+                  ),
               textAlign: TextAlign.center,
             ),
-            const SizedBox(height: 30),
+            const SizedBox(height: AppSpacing.lg),
             Expanded(
               child: Directionality(
                 // Use RTL for proper Arabic letter order display
@@ -287,8 +273,8 @@ class _MakharijPracticePageState extends State<MakharijPracticePage> {
                   gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                     crossAxisCount: 4,
                     childAspectRatio: 1.0,
-                    crossAxisSpacing: 12,
-                    mainAxisSpacing: 12,
+                    crossAxisSpacing: AppSpacing.sm,
+                    mainAxisSpacing: AppSpacing.sm,
                   ),
                   itemCount: letters.length,
                   itemBuilder: (context, index) {
@@ -297,25 +283,31 @@ class _MakharijPracticePageState extends State<MakharijPracticePage> {
                     final isSelected = mappedIndex == selectedIndex;
                     return ElevatedButton(
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: isSelected
-                            ? const Color(0xFF00A896)
-                            : const Color(0xFF1F8A70),
-                        foregroundColor: Colors.white,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        elevation: isSelected ? 4 : 2,
+                        backgroundColor:
+                            isSelected ? AppColors.palm : AppColors.card,
+                        foregroundColor:
+                            isSelected ? AppColors.parchment : AppColors.ink,
+                        elevation: 0,
                         padding: EdgeInsets.zero,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: AppRadius.mdBorder,
+                          side: BorderSide(
+                            color:
+                                isSelected ? AppColors.palm : AppColors.line,
+                          ),
+                        ),
                       ),
                       onPressed: () => selectLetter(mappedIndex), // Use the original index for selection
                       child: Center(
                         child: Text(
                           letters[mappedIndex], // Display the letter using the mapped index
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 32,
                             fontWeight: FontWeight.bold,
-                            color: Colors.white,
-                            fontFamily: 'Scheherazade',
+                            color: isSelected
+                                ? AppColors.parchment
+                                : AppColors.ink,
+                            fontFamily: 'Amiri Quran',
                           ),
                         ),
                       ),
@@ -324,7 +316,7 @@ class _MakharijPracticePageState extends State<MakharijPracticePage> {
                 ),
               ),
             ),
-            const SizedBox(height: 20),
+            const SizedBox(height: AppSpacing.lg),
             // Practice button that appears after selection
             if (selectedIndex != null) ...[
               // Reset to LTR for the button text
@@ -332,19 +324,8 @@ class _MakharijPracticePageState extends State<MakharijPracticePage> {
                 textDirection: TextDirection.ltr,
                 child: ElevatedButton.icon(
                   onPressed: navigateToRecording,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF00A896),
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
-                  icon: const Icon(Icons.mic),
-                  label: const Text(
-                    "Practice Recording",
-                    style: TextStyle(fontSize: 18),
-                  ),
+                  icon: const Icon(Icons.mic_rounded),
+                  label: const Text('Practice recording'),
                 ),
               ),
             ],

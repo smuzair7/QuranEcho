@@ -9,6 +9,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as path;
 import 'package:http/http.dart' as http;
 import 'package:QuranEcho/config/app_config.dart';
+import '../theme/app_theme.dart';
 
 class ReadSurahSelectPage extends StatefulWidget {
   const ReadSurahSelectPage({super.key});
@@ -54,19 +55,10 @@ class SurahSearchDelegate extends SearchDelegate<Map<String, dynamic>> {
   @override
   Widget buildSuggestions(BuildContext context) {
     if (query.isEmpty) {
-      return Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [
-              const Color(0xFF00A896).withOpacity(0.1),
-              Colors.white,
-            ],
-          ),
-        ),
-        child: const Center(
-          child: Text('Type to search for a surah'),
+      return const Center(
+        child: Text(
+          'Type to search for a surah',
+          style: TextStyle(color: AppColors.inkSoft),
         ),
       );
     }
@@ -76,69 +68,52 @@ class SurahSearchDelegate extends SearchDelegate<Map<String, dynamic>> {
           surah['number'].toString() == query;
     }).toList();
 
-    return Container(
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [
-            const Color(0xFF00A896).withOpacity(0.1),
-            Colors.white,
-          ],
-        ),
-      ),
-      child: ListView.builder(
-        itemCount: results.length,
-        itemBuilder: (context, index) {
-          final surah = results[index];
-          return ListTile(
-            onTap: () {
-              // Create properly formatted surahInfo object with integer surahNumber
-              final surahInfo = {
-                'surahNumber': surah['number'] as int, // Explicitly cast to int
-                'surahName': surah['name'],
-                'arabicName': surah['arabicName'],
-                'ayahCount': surah['ayahs'],
-              };
-              onSelect(surahInfo);
-              close(context, surahInfo);
-            },
-            leading: Container(
-              width: 35,
-              height: 35,
-              decoration: BoxDecoration(
-                color: const Color(0xFF00A896).withOpacity(0.1),
-                shape: BoxShape.circle,
-              ),
-              child: Center(
-                child: Text(
-                  '${surah['number']}',
-                  style: const TextStyle(
-                    fontWeight: FontWeight.bold,
-                    color: Color(0xFF00A896),
-                  ),
-                ),
-              ),
+    return ListView.builder(
+      itemCount: results.length,
+      itemBuilder: (context, index) {
+        final surah = results[index];
+        return ListTile(
+          onTap: () {
+            // Create properly formatted surahInfo object with integer surahNumber
+            final surahInfo = {
+              'surahNumber': surah['number'] as int, // Explicitly cast to int
+              'surahName': surah['name'],
+              'arabicName': surah['arabicName'],
+              'ayahCount': surah['ayahs'],
+            };
+            onSelect(surahInfo);
+            close(context, surahInfo);
+          },
+          leading: CircleAvatar(
+            backgroundColor: AppColors.palmSoft,
+            foregroundColor: AppColors.palm,
+            child: Text(
+              '${surah['number']}',
+              style: const TextStyle(fontWeight: FontWeight.bold),
             ),
-            title: Text(
-              surah['name'],
-              style: const TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w500,
-              ),
+          ),
+          title: Text(
+            surah['name'],
+            style: const TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w600,
             ),
-            subtitle: Text('${surah['ayahs']} ayahs'),
-            trailing: Text(
-              surah['arabicName'],
-              style: const TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                fontFamily: 'Scheherazade',
-              ),
+          ),
+          subtitle: Text(
+            '${surah['ayahs']} ayahs',
+            style: const TextStyle(color: AppColors.inkSoft),
+          ),
+          trailing: Text(
+            surah['arabicName'],
+            style: const TextStyle(
+              fontSize: 18,
+              fontFamily: 'Amiri Quran',
+              color: AppColors.ink,
             ),
-          );
-        },
-      ),
+            textDirection: TextDirection.rtl,
+          ),
+        );
+      },
     );
   }
 }
@@ -850,26 +825,20 @@ class _ReadSurahSelectPageState extends State<ReadSurahSelectPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text(
-          'Select Surah',
-          style: TextStyle(
-            fontWeight: FontWeight.bold,
-            color: Colors.white,
-          ),
-        ),
+        title: const Text('Select surah'),
         actions: [
           // Voice search button
           IconButton(
             icon: Icon(
               _isRecording ? Icons.mic : Icons.mic_none,
-              color: _isRecording ? Colors.red : Colors.white,
+              color: _isRecording ? AppColors.gold : null,
             ),
             tooltip: 'Search by voice',
             onPressed: _toggleVoiceRecording,
           ),
           // Text search field
           IconButton(
-            icon: const Icon(Icons.search, color: Colors.white),
+            icon: const Icon(Icons.search_rounded),
             onPressed: () {
               showSearch(
                 context: context,
@@ -885,11 +854,9 @@ class _ReadSurahSelectPageState extends State<ReadSurahSelectPage> {
             },
           ),
         ],
-        backgroundColor: const Color(0xFF00A896),
-        elevation: 0, // Match the Hifz page's elevation
       ),
-      body: _showSearchResults 
-          ? _buildSearchResults() 
+      body: _showSearchResults
+          ? _buildSearchResults()
           : _buildSurahList(), // Use list instead of grid to match Hifz page
     );
   }
@@ -900,26 +867,12 @@ class _ReadSurahSelectPageState extends State<ReadSurahSelectPage> {
       children: [
         // Search bar with styling matching HifzSelectSurahPage
         Padding(
-          padding: const EdgeInsets.all(16.0),
+          padding: const EdgeInsets.all(AppSpacing.md),
           child: TextField(
             onChanged: _filterSurahs,
-            decoration: InputDecoration(
-              hintText: 'Search surah...',
-              prefixIcon: const Icon(Icons.search),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide(color: Colors.grey.shade300),
-              ),
-              enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide(color: Colors.grey.shade300),
-              ),
-              focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: const BorderSide(color: Color(0xFF00A896), width: 2),
-              ),
-              filled: true,
-              fillColor: Colors.grey.shade100,
+            decoration: const InputDecoration(
+              hintText: 'Search surah',
+              prefixIcon: Icon(Icons.search_rounded),
             ),
           ),
         ),
@@ -928,78 +881,92 @@ class _ReadSurahSelectPageState extends State<ReadSurahSelectPage> {
         if (_isRecording || _isProcessing)
           Container(
             width: double.infinity,
-            margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            padding: const EdgeInsets.all(12),
+            margin: const EdgeInsets.symmetric(
+              horizontal: AppSpacing.md,
+              vertical: AppSpacing.sm,
+            ),
+            padding: const EdgeInsets.all(AppSpacing.sm + AppSpacing.xs),
             decoration: BoxDecoration(
-              color: _isRecording ? Colors.red.withOpacity(0.1) : Colors.orange.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(
-                color: _isRecording ? Colors.red : Colors.orange,
-                width: 1,
-              ),
+              color: _isRecording ? AppColors.claySoft : AppColors.goldSoft,
+              borderRadius: AppRadius.smBorder,
             ),
             child: Row(
               children: [
                 if (_isProcessing)
                   const SizedBox(
-                    width: 16, 
-                    height: 16, 
+                    width: 16,
+                    height: 16,
                     child: CircularProgressIndicator(strokeWidth: 2),
                   )
                 else
                   Icon(
                     _isRecording ? Icons.mic : Icons.hourglass_top,
-                    color: _isRecording ? Colors.red : Colors.orange,
+                    color: _isRecording ? AppColors.clay : AppColors.gold,
                     size: 16,
                   ),
-                const SizedBox(width: 12),
+                const SizedBox(width: AppSpacing.sm),
                 Expanded(
                   child: Text(
                     _voiceSearchStatus,
                     style: TextStyle(
                       fontSize: 13,
-                      color: _isRecording ? Colors.red : Colors.orange,
+                      color: _isRecording ? AppColors.clay : AppColors.gold,
                     ),
                   ),
                 ),
               ],
             ),
           ),
-        
+
         // List of surahs styled like HifzSelectSurahPage
         Expanded(
-          child: ListView.builder(
+          child: ListView.separated(
+            padding: const EdgeInsets.fromLTRB(
+              AppSpacing.md,
+              0,
+              AppSpacing.md,
+              AppSpacing.md,
+            ),
             itemCount: _filteredSurahs.length,
+            separatorBuilder: (context, index) =>
+                const SizedBox(height: AppSpacing.sm),
             itemBuilder: (context, index) {
               final surah = _filteredSurahs[index];
               return Card(
-                margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-                elevation: 2,
                 child: ListTile(
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.md,
+                    vertical: 4,
+                  ),
+                  shape: RoundedRectangleBorder(borderRadius: AppRadius.mdBorder),
                   leading: CircleAvatar(
-                    backgroundColor: const Color(0xFF00A896),
-                    foregroundColor: Colors.white,
-                    child: Text(surah['number'].toString()),
+                    backgroundColor: AppColors.palmSoft,
+                    foregroundColor: AppColors.palm,
+                    child: Text(
+                      surah['number'].toString(),
+                      style: const TextStyle(fontWeight: FontWeight.bold),
+                    ),
                   ),
                   title: Text(
                     surah['name'],
                     style: const TextStyle(
-                      fontWeight: FontWeight.bold,
+                      fontWeight: FontWeight.w600,
                       fontSize: 16,
                     ),
                   ),
                   subtitle: Text(
-                    "${surah['ayahs']} Ayahs",
+                    "${surah['ayahs']} ayahs",
                     style: const TextStyle(
                       fontSize: 12,
-                      color: Colors.grey,
+                      color: AppColors.inkSoft,
                     ),
                   ),
                   trailing: Text(
                     surah['arabicName'],
                     style: const TextStyle(
-                      fontSize: 18,
-                      fontFamily: 'Scheherazade',
+                      fontSize: 20,
+                      fontFamily: 'Amiri Quran',
+                      color: AppColors.ink,
                     ),
                     textDirection: TextDirection.rtl,
                   ),
@@ -1011,10 +978,10 @@ class _ReadSurahSelectPageState extends State<ReadSurahSelectPage> {
                       'arabicName': surah['arabicName'],
                       'ayahCount': surah['ayahs'],
                     };
-                    
+
                     // Add debugging
                     debugPrint("🔍 Navigating to surah: ${surahInfo['surahNumber']} - ${surahInfo['surahName']}");
-                    
+
                     // Pass surahInfo directly
                     Navigator.pushNamed(
                       context,
@@ -1034,207 +1001,184 @@ class _ReadSurahSelectPageState extends State<ReadSurahSelectPage> {
   Widget _buildSearchResults() {
     debugPrint("🔍 Building search results view with ${searchResults.length} results");
     
-    return Container(
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [
-            const Color(0xFF00A896).withOpacity(0.1),
-            Colors.white,
-          ],
-        ),
-      ),
-      child: Column(
-        children: [
-          // Voice search status
-          Container(
-            width: double.infinity,
-            margin: const EdgeInsets.all(16),
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: _isProcessing 
-                  ? Colors.orange.withOpacity(0.1)
-                  : searchResults.isEmpty 
-                      ? Colors.red.withOpacity(0.1) 
-                      : Colors.green.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(
-                color: _isProcessing 
-                    ? Colors.orange 
-                    : searchResults.isEmpty 
-                        ? Colors.red 
-                        : Colors.green,
-                width: 1,
-              ),
-            ),
-            child: Row(
-              children: [
-                if (_isProcessing)
-                  const SizedBox(
-                    width: 20,
-                    height: 20,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  )
-                else
-                  Icon(
-                    searchResults.isEmpty ? Icons.search_off : Icons.search,
-                    color: searchResults.isEmpty ? Colors.red : Colors.green,
-                    size: 20,
-                  ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Text(
-                    _voiceSearchStatus,
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w500,
-                      color: _isProcessing 
-                          ? Colors.orange 
-                          : searchResults.isEmpty 
-                              ? Colors.red 
-                              : Colors.green,
-                    ),
+    final statusColor = _isProcessing
+        ? AppColors.gold
+        : searchResults.isEmpty
+            ? AppColors.clay
+            : AppColors.palm;
+    final statusBg = _isProcessing
+        ? AppColors.goldSoft
+        : searchResults.isEmpty
+            ? AppColors.claySoft
+            : AppColors.palmSoft;
+
+    return Column(
+      children: [
+        // Voice search status
+        Container(
+          width: double.infinity,
+          margin: const EdgeInsets.all(AppSpacing.md),
+          padding: const EdgeInsets.all(AppSpacing.md),
+          decoration: BoxDecoration(
+            color: statusBg,
+            borderRadius: AppRadius.mdBorder,
+          ),
+          child: Row(
+            children: [
+              if (_isProcessing)
+                const SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
+              else
+                Icon(
+                  searchResults.isEmpty ? Icons.search_off : Icons.search,
+                  color: statusColor,
+                  size: 20,
+                ),
+              const SizedBox(width: AppSpacing.sm),
+              Expanded(
+                child: Text(
+                  _voiceSearchStatus,
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w500,
+                    color: statusColor,
                   ),
                 ),
-                IconButton(
-                  icon: const Icon(Icons.close),
-                  onPressed: () {
-                    debugPrint("🔍 Closing search results");
-                    setState(() {
-                      _showSearchResults = false;
-                      searchResults.clear();
-                      _voiceSearchStatus = 'Tap microphone to search by voice';
-                    });
+              ),
+              IconButton(
+                icon: const Icon(Icons.close),
+                onPressed: () {
+                  debugPrint("🔍 Closing search results");
+                  setState(() {
+                    _showSearchResults = false;
+                    searchResults.clear();
+                    _voiceSearchStatus = 'Tap microphone to search by voice';
+                  });
+                },
+              ),
+            ],
+          ),
+        ),
+
+        // Search results list or empty state
+        Expanded(
+          child: searchResults.isEmpty && !_isProcessing
+              ? Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Icon(
+                        Icons.search_off,
+                        size: 64,
+                        color: AppColors.inkSoft,
+                      ),
+                      const SizedBox(height: AppSpacing.md),
+                      Text(
+                        "No matches found",
+                        style: Theme.of(context).textTheme.titleMedium,
+                      ),
+                      const SizedBox(height: AppSpacing.sm),
+                      const Padding(
+                        padding: EdgeInsets.symmetric(horizontal: AppSpacing.xl),
+                        child: Text(
+                          "Try a different phrase or tap the microphone to search again",
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: AppColors.inkSoft,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                )
+              : ListView.separated(
+                  padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
+                  itemCount: searchResults.length,
+                  separatorBuilder: (context, index) =>
+                      const SizedBox(height: AppSpacing.sm),
+                  itemBuilder: (context, index) {
+                    final ayah = searchResults[index];
+                    return Card(
+                      child: InkWell(
+                        onTap: () {
+                          debugPrint("🔍 User selected result: Surah ${ayah['surahNumber']}, Ayah ${ayah['ayahNumber']}");
+                          _navigateToAyah(ayah);
+                        },
+                        borderRadius: AppRadius.mdBorder,
+                        child: Padding(
+                          padding: const EdgeInsets.all(AppSpacing.md),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.end,
+                            children: [
+                              // Surah and Ayah info
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: AppSpacing.sm,
+                                          vertical: AppSpacing.xs,
+                                        ),
+                                        decoration: BoxDecoration(
+                                          color: AppColors.palmSoft,
+                                          borderRadius: AppRadius.smBorder,
+                                        ),
+                                        child: Text(
+                                          'Surah ${ayah['surahNumber']}, ayah ${ayah['ayahNumber']}',
+                                          style: const TextStyle(
+                                            color: AppColors.palmDeep,
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                      ),
+                                      const SizedBox(height: AppSpacing.xs),
+                                      Text(
+                                        ayah['surahName'],
+                                        style: const TextStyle(
+                                          fontSize: 14,
+                                          fontWeight: FontWeight.w500,
+                                          color: AppColors.ink,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  const Icon(
+                                    Icons.arrow_forward,
+                                    color: AppColors.palm,
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: AppSpacing.sm + AppSpacing.xs),
+
+                              // Ayah text
+                              Text(
+                                ayah['text'],
+                                textDirection: TextDirection.rtl,
+                                textAlign: TextAlign.right,
+                                style: const TextStyle(
+                                  fontSize: 18,
+                                  fontFamily: 'Amiri Quran',
+                                  height: 1.8,
+                                  color: AppColors.ink,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    );
                   },
                 ),
-              ],
-            ),
-          ),
-          
-          // Search results list or empty state
-          Expanded(
-            child: searchResults.isEmpty && !_isProcessing
-                ? Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(
-                          Icons.search_off,
-                          size: 64,
-                          color: Colors.grey.shade400,
-                        ),
-                        const SizedBox(height: 16),
-                        Text(
-                          "No matches found",
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.w500,
-                            color: Colors.grey.shade600,
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 32),
-                          child: Text(
-                            "Try a different phrase or tap the microphone to search again",
-                            textAlign: TextAlign.center,
-                            style: TextStyle(
-                              fontSize: 14,
-                              color: Colors.grey.shade500,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  )
-                : ListView.builder(
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    itemCount: searchResults.length,
-                    itemBuilder: (context, index) {
-                      final ayah = searchResults[index];
-                      return Card(
-                        margin: const EdgeInsets.only(bottom: 12),
-                        elevation: 2,
-                        // Change card background to white
-                        color: Colors.white,
-                        child: InkWell(
-                          onTap: () {
-                            debugPrint("🔍 User selected result: Surah ${ayah['surahNumber']}, Ayah ${ayah['ayahNumber']}");
-                            _navigateToAyah(ayah);
-                          },
-                          borderRadius: BorderRadius.circular(12),
-                          child: Padding(
-                            padding: const EdgeInsets.all(16),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.end,
-                              children: [
-                                // Surah and Ayah info
-                                Row(
-                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                  children: [
-                                    Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      children: [
-                                        Container(
-                                          padding: const EdgeInsets.symmetric(
-                                            horizontal: 8, 
-                                            vertical: 4,
-                                          ),
-                                          decoration: BoxDecoration(
-                                            color: const Color(0xFF00A896),
-                                            borderRadius: BorderRadius.circular(12),
-                                          ),
-                                          child: Text(
-                                            'Surah ${ayah['surahNumber']}, Ayah ${ayah['ayahNumber']}',
-                                            style: const TextStyle(
-                                              color: Colors.white,
-                                              fontSize: 12,
-                                              fontWeight: FontWeight.bold,
-                                            ),
-                                          ),
-                                        ),
-                                        const SizedBox(height: 4),
-                                        Text(
-                                          ayah['surahName'],
-                                          style: const TextStyle(
-                                            fontSize: 14,
-                                            fontWeight: FontWeight.w500,
-                                            color: Colors.black87,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                    const Icon(
-                                      Icons.arrow_forward,
-                                      color: Color(0xFF00A896),
-                                    ),
-                                  ],
-                                ),
-                                const SizedBox(height: 12),
-                                
-                                // Ayah text
-                                Text(
-                                  ayah['text'],
-                                  textDirection: TextDirection.rtl,
-                                  textAlign: TextAlign.right,
-                                  style: const TextStyle(
-                                    fontSize: 18,
-                                    fontFamily: 'Scheherazade',
-                                    height: 1.8,
-                                    color: Colors.black87, // Ensure text is dark for good contrast on white
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      );
-                    },
-                  ),
-          ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 }

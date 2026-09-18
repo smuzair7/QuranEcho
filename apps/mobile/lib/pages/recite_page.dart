@@ -12,6 +12,7 @@ import 'package:path/path.dart' as path;
 import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:fl_chart/fl_chart.dart'; // For visualization
+import '../theme/app_theme.dart';
 
 class RecitePage extends StatefulWidget {
   final String? selectedSurah;
@@ -799,11 +800,9 @@ Future<String> _extractQariAudioToFile(int surahNumber, int ayahNumber) async {
       : (widget.selectedSurah != null ? widget.selectedSurah! : 'Recitation');
     
     return Scaffold(
+      backgroundColor: AppColors.parchment,
       appBar: AppBar(
-        title: Text(isFromLehja ? 'Lehja Practice - $title' : 'Recitation - $title'),
-        backgroundColor: const Color(0xFF00A896), // Match Hifz page color
-        foregroundColor: Colors.black,
-        elevation: 0,
+        title: Text(isFromLehja ? 'Lehja practice - $title' : 'Recitation - $title'),
       ),
       body: _isPracticingAyah ? _buildPracticePage() : _buildSurahPage(),
     );
@@ -821,122 +820,90 @@ Future<String> _extractQariAudioToFile(int surahNumber, int ayahNumber) async {
   
   Widget _buildPracticePage() {
   if (_currentAyah == null) return const Center(child: Text('No ayah selected'));
-  
+
   if (_isComparingRecitation) {
     return Container(
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [
-            Colors.black87,
-            const Color(0xFF121212),
-          ],
-        ),
-      ),
+      color: AppColors.parchment,
       child: SafeArea(
         child: SingleChildScrollView(
           child: Padding(
-            padding: const EdgeInsets.all(20),
+            padding: const EdgeInsets.all(AppSpacing.lg),
             child: _buildRecitationComparisonView(),
           ),
         ),
       ),
     );
   }
-  
+
   // Original practice view content
   return Container(
-    decoration: BoxDecoration(
-      gradient: LinearGradient(
-        begin: Alignment.topCenter,
-        end: Alignment.bottomCenter,
-        colors: [
-          Colors.black87,
-          const Color(0xFF121212),
-        ],
-      ),
-    ),
+    color: AppColors.parchment,
     child: SingleChildScrollView(
       child: Padding(
-        padding: const EdgeInsets.all(20),
+        padding: const EdgeInsets.all(AppSpacing.lg),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             Icon(
               Icons.menu_book,
-              size: 80,
-              color: const Color(0xFF00A896),
+              size: 56,
+              color: AppColors.palm,
             ),
-            const SizedBox(height: 20),
+            const SizedBox(height: AppSpacing.md),
             Text(
-              'Practice Ayah ${_currentAyah!['ayahNumber']}',
-              style: const TextStyle(
-                fontSize: 28,
-                fontWeight: FontWeight.bold,
-                color: Colors.white,
-              ),
+              'Practice ayah ${_currentAyah!['ayahNumber']}',
+              style: Theme.of(context).textTheme.headlineSmall,
               textAlign: TextAlign.center,
             ),
-            const SizedBox(height: 30),
-            
+            const SizedBox(height: AppSpacing.lg),
+
             // Ayah text display
             Container(
-              padding: const EdgeInsets.all(20),
+              width: double.infinity,
+              padding: const EdgeInsets.all(AppSpacing.lg),
               decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(16),
-                boxShadow: [
-                  BoxShadow(
-                    color: const Color(0xFF00A896).withOpacity(0.3),
-                    spreadRadius: 2,
-                    blurRadius: 5,
-                  ),
-                ],
-                border: Border.all(
-                  color: const Color(0xFF00A896),
-                  width: 2,
-                ),
+                color: AppColors.card,
+                borderRadius: AppRadius.mdBorder,
+                border: Border.all(color: AppColors.line),
               ),
               child: Text(
                 _currentAyah!['displayText'] ?? _currentAyah!['text'],
                 style: const TextStyle(
                   fontSize: 26,
-                  fontFamily: 'Scheherazade',
+                  fontFamily: 'Amiri Quran',
                   height: 1.8,
-                  color: Colors.black,
+                  color: AppColors.ink,
                 ),
                 textDirection: TextDirection.rtl,
                 textAlign: TextAlign.center,
               ),
             ),
-            
-            const SizedBox(height: 30),
-            
+
+            const SizedBox(height: AppSpacing.lg),
+
             Text(
               _recordingStatus,
               textAlign: TextAlign.center,
-              style: const TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w500,
-                color: Colors.white,
-              ),
+              style: Theme.of(context)
+                  .textTheme
+                  .titleSmall
+                  ?.copyWith(color: AppColors.inkSoft),
             ),
-            
-            const SizedBox(height: 20),
-            
+
+            const SizedBox(height: AppSpacing.md),
+
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 // Record button
                 ElevatedButton(
-                  onPressed: _isPlaying ? null : (_isRecording 
-                    ? () => _stopRecording(_currentAyah!) 
+                  onPressed: _isPlaying ? null : (_isRecording
+                    ? () => _stopRecording(_currentAyah!)
                     : () => _startRecording(_currentAyah!)),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: _isRecording ? Colors.red : const Color(0xFF00A896),
-                    foregroundColor: Colors.white,
+                    backgroundColor: _isRecording ? AppColors.clay : AppColors.palm,
+                    foregroundColor: AppColors.parchment,
                     padding: const EdgeInsets.all(16),
                     shape: const CircleBorder(),
                   ),
@@ -945,20 +912,20 @@ Future<String> _extractQariAudioToFile(int surahNumber, int ayahNumber) async {
                     size: 36,
                   ),
                 ),
-                
-                const SizedBox(width: 20),
-                
+
+                const SizedBox(width: AppSpacing.md),
+
                 // Play button
                 ElevatedButton(
-                  onPressed: (_currentAyah != null && 
-                              _currentAyah!['recordingPath'] != null && 
-                              _currentAyah!['recordingPath'].toString().isNotEmpty && 
-                              !_isRecording) 
+                  onPressed: (_currentAyah != null &&
+                              _currentAyah!['recordingPath'] != null &&
+                              _currentAyah!['recordingPath'].toString().isNotEmpty &&
+                              !_isRecording)
                       ? (_isPlaying ? _stopPlayback : () => _playRecording(_currentAyah!['recordingPath']))
                       : null,
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: _isPlaying ? Colors.orange : const Color(0xFF028090),
-                    foregroundColor: Colors.white,
+                    backgroundColor: _isPlaying ? AppColors.clay : AppColors.palmDeep,
+                    foregroundColor: AppColors.parchment,
                     padding: const EdgeInsets.all(16),
                     shape: const CircleBorder(),
                   ),
@@ -967,17 +934,17 @@ Future<String> _extractQariAudioToFile(int surahNumber, int ayahNumber) async {
                     size: 36,
                   ),
                 ),
-                
+
                 // Update in the _buildPracticePage method
                 if (_currentAyah != null && _currentAyah!['surahNumber'] == 1) ...[
-                  const SizedBox(width: 20),
+                  const SizedBox(width: AppSpacing.md),
                   ElevatedButton(
-                    onPressed: !_isRecording && !_isReciterPlaying 
-                        ? () => _playReciterAudio(_currentAyah!['surahNumber'], _currentAyah!['ayahNumber']) 
+                    onPressed: !_isRecording && !_isReciterPlaying
+                        ? () => _playReciterAudio(_currentAyah!['surahNumber'], _currentAyah!['ayahNumber'])
                         : (_isReciterPlaying ? () => _reciterAudioPlayer.stop() : null),
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: _isReciterPlaying ? Colors.orange.shade800 : Colors.amber.shade800,
-                      foregroundColor: Colors.white,
+                      backgroundColor: _isReciterPlaying ? AppColors.clay : AppColors.gold,
+                      foregroundColor: AppColors.parchment,
                       padding: const EdgeInsets.all(16),
                       shape: const CircleBorder(),
                     ),
@@ -989,155 +956,138 @@ Future<String> _extractQariAudioToFile(int surahNumber, int ayahNumber) async {
                 ],
               ],
             ),
-            
-            const SizedBox(height: 20),
-            
+
+            const SizedBox(height: AppSpacing.md),
+
             // API processing status
             if (_isProcessing) ...[
-              const SizedBox(height: 20),
+              const SizedBox(height: AppSpacing.md),
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   const SizedBox(
                     width: 24,
                     height: 24,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                      valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF00A896)),
-                    ),
+                    child: CircularProgressIndicator(strokeWidth: 2),
                   ),
-                  const SizedBox(width: 10),
+                  const SizedBox(width: AppSpacing.sm),
                   Text(
                     _apiResult ?? "Processing recitation...",
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 14,
                       fontStyle: FontStyle.italic,
-                      color: Colors.white70,
+                      color: AppColors.inkSoft,
                     ),
                   ),
                 ],
               ),
             ],
-            
+
             // Transcription Display
             if (_transcriptions.isNotEmpty) ...[
-              const SizedBox(height: 30),
+              const SizedBox(height: AppSpacing.lg),
               Container(
                 width: double.infinity,
-                padding: const EdgeInsets.all(16),
+                padding: const EdgeInsets.all(AppSpacing.md),
                 decoration: BoxDecoration(
-                  color: const Color(0xFF1E1E1E),
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: const Color(0xFF00A896), width: 1),
+                  color: AppColors.card,
+                  borderRadius: AppRadius.smBorder,
+                  border: Border.all(color: AppColors.line),
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
-                      'Transcription:',
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 18,
-                        color: Color(0xFF00A896),
-                      ),
+                    Text(
+                      'Transcription',
+                      style: Theme.of(context).textTheme.titleMedium,
                     ),
-                    const SizedBox(height: 8),
+                    const SizedBox(height: AppSpacing.sm),
                     for (var transcription in _transcriptions)
                       Padding(
                         padding: const EdgeInsets.symmetric(vertical: 4),
                         child: _buildTranscriptionWithHighlightedErrors(
-                          transcription, 
+                          transcription,
                           _currentAyah!
                         ),
                       ),
-                    const SizedBox(height: 12),
-                    const Text(
-                      'Note: Words in red indicate possible recitation mistakes',
+                    const SizedBox(height: AppSpacing.sm),
+                    Text(
+                      'Words in red indicate possible recitation mistakes',
                       style: TextStyle(
                         fontSize: 12,
                         fontStyle: FontStyle.italic,
-                        color: Colors.grey,
+                        color: AppColors.inkSoft,
                       ),
                     ),
                   ],
                 ),
               ),
             ],
-            
+
             // API Result/Error Display
             if (_apiResult != null && _apiResult!.contains('Error')) ...[
-              const SizedBox(height: 20),
+              const SizedBox(height: AppSpacing.md),
               Container(
                 width: double.infinity,
-                padding: const EdgeInsets.all(16),
+                padding: const EdgeInsets.all(AppSpacing.md),
                 decoration: BoxDecoration(
-                  color: Colors.red.withOpacity(0.2),
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: Colors.red.shade300, width: 1),
+                  color: AppColors.claySoft,
+                  borderRadius: AppRadius.smBorder,
+                  border: Border.all(color: AppColors.clay),
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
-                      'Error Details:',
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 16,
-                        color: Colors.red,
-                      ),
+                    Text(
+                      'Error details',
+                      style: Theme.of(context)
+                          .textTheme
+                          .titleSmall
+                          ?.copyWith(color: AppColors.clay),
                     ),
-                    const SizedBox(height: 8),
+                    const SizedBox(height: AppSpacing.sm),
                     Text(
                       _apiResult!,
                       style: const TextStyle(
                         fontSize: 14,
-                        color: Colors.white70,
+                        color: AppColors.ink,
                       ),
                     ),
                   ],
                 ),
               ),
             ],
-            
-            const SizedBox(height: 30),
-            
+
+            const SizedBox(height: AppSpacing.lg),
+
             // Back to surah button
-            ElevatedButton.icon(
+            OutlinedButton.icon(
               onPressed: _stopPracticing,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.grey.shade700,
-                foregroundColor: Colors.white,
-              ),
               icon: const Icon(Icons.arrow_back),
-              label: const Text('Back to Surah'),
+              label: const Text('Back to surah'),
             ),
-            
-            const SizedBox(height: 40),
-            
+
+            const SizedBox(height: AppSpacing.xl),
+
             // Add the comparison button after the recording controls
             if (_currentAyah != null && _currentAyah!['recordingPath'] != null && !_isRecording) ...[
-              const SizedBox(height: 20),
+              const SizedBox(height: AppSpacing.md),
               ElevatedButton.icon(
-                onPressed: _isProcessingComparison 
-                  ? null 
+                onPressed: _isProcessingComparison
+                  ? null
                   : () => _compareWithQariStyle(_currentAyah!),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.purple,
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                ),
-                icon: _isProcessingComparison 
+                icon: _isProcessingComparison
                   ? const SizedBox(
                       width: 20,
                       height: 20,
                       child: CircularProgressIndicator(
-                        color: Colors.white,
+                        color: AppColors.parchment,
                         strokeWidth: 2,
                       ),
                     )
                   : const Icon(Icons.compare),
-                label: Text(_isProcessingComparison 
-                  ? 'Analyzing...' 
+                label: Text(_isProcessingComparison
+                  ? 'Analyzing...'
                   : 'Compare with Sheikh Abdul Basit'
                 ),
               ),
@@ -1151,34 +1101,25 @@ Future<String> _extractQariAudioToFile(int surahNumber, int ayahNumber) async {
 
   Widget _buildErrorView() {
     return Container(
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [
-            Colors.black87,
-            const Color(0xFF121212),
-          ],
-        ),
-      ),
+      color: AppColors.parchment,
       child: Center(
         child: Padding(
-          padding: const EdgeInsets.all(20.0),
+          padding: const EdgeInsets.all(AppSpacing.lg),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Icon(Icons.error_outline, size: 60, color: Colors.red),
-              const SizedBox(height: 16),
-              const Text(
+              const Icon(Icons.error_outline, size: 56, color: AppColors.clay),
+              const SizedBox(height: AppSpacing.md),
+              Text(
                 'Failed to load surah content',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white),
+                style: Theme.of(context).textTheme.titleMedium,
               ),
-              const SizedBox(height: 8),
-              Text(errorMessage, 
+              const SizedBox(height: AppSpacing.sm),
+              Text(errorMessage,
                 textAlign: TextAlign.center,
-                style: const TextStyle(color: Colors.white70),
+                style: const TextStyle(color: AppColors.inkSoft),
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: AppSpacing.md),
               ElevatedButton(
                 onPressed: () {
                   setState(() {
@@ -1187,9 +1128,6 @@ Future<String> _extractQariAudioToFile(int surahNumber, int ayahNumber) async {
                   });
                   _loadSurahContent();
                 },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF00A896),
-                ),
                 child: const Text('Retry'),
               ),
             ],
@@ -1202,47 +1140,34 @@ Future<String> _extractQariAudioToFile(int surahNumber, int ayahNumber) async {
   Widget _buildSurahContent() {
     if (ayahs.isEmpty) {
       return Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [
-              Colors.black87,
-              const Color(0xFF121212), // Very dark gray
-            ],
-          ),
-        ),
+        color: AppColors.parchment,
         child: Center(
           child: Padding(
-            padding: const EdgeInsets.all(20.0),
+            padding: const EdgeInsets.all(AppSpacing.lg),
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Icon(
                   widget.selectedReciter != null ? Icons.headphones : Icons.menu_book,
-                  size: 80,
-                  color: const Color(0xFF00A896),
+                  size: 56,
+                  color: AppColors.palm,
                 ),
-                const SizedBox(height: 20),
+                const SizedBox(height: AppSpacing.md),
                 Text(
-                  widget.selectedReciter != null 
+                  widget.selectedReciter != null
                     ? 'Practice with ${widget.selectedReciter}'
-                    : 'Quran Recitation',
-                  style: const TextStyle(
-                    fontSize: 28,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
-                  ),
+                    : 'Quran recitation',
+                  style: Theme.of(context).textTheme.headlineSmall,
                   textAlign: TextAlign.center,
                 ),
-                const SizedBox(height: 16),
-                const Text(
+                const SizedBox(height: AppSpacing.sm),
+                Text(
                   'Select a surah to begin practicing',
                   textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontSize: 16,
-                    color: Colors.white70,
-                  ),
+                  style: Theme.of(context)
+                      .textTheme
+                      .bodyMedium
+                      ?.copyWith(color: AppColors.inkSoft),
                 ),
               ],
             ),
@@ -1252,30 +1177,16 @@ Future<String> _extractQariAudioToFile(int surahNumber, int ayahNumber) async {
     }
 
     return Container(
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [
-            Colors.black87,
-            const Color(0xFF121212), // Very dark gray
-          ],
-        ),
-      ),
+      color: AppColors.parchment,
       child: ListView.builder(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(AppSpacing.md),
         itemCount: ayahs.length,
         itemBuilder: (context, index) {
           final ayah = ayahs[index];
           return Card(
-            margin: const EdgeInsets.only(bottom: 12),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
-            ),
-            // Match the card color with Hifz page
-            color: Colors.white,
+            margin: const EdgeInsets.only(bottom: AppSpacing.sm),
             child: Padding(
-              padding: const EdgeInsets.all(16.0),
+              padding: const EdgeInsets.all(AppSpacing.md),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -1284,14 +1195,13 @@ Future<String> _extractQariAudioToFile(int surahNumber, int ayahNumber) async {
                       Container(
                         padding: const EdgeInsets.all(6),
                         decoration: const BoxDecoration(
-                          // Match primary color with Hifz page
-                          color: Color(0xFF00A896),
+                          color: AppColors.palm,
                           shape: BoxShape.circle,
                         ),
                         child: Text(
                           '${ayah['ayahNumber']}',
                           style: const TextStyle(
-                            color: Colors.white,
+                            color: AppColors.parchment,
                             fontWeight: FontWeight.bold,
                           ),
                         ),
@@ -1300,19 +1210,19 @@ Future<String> _extractQariAudioToFile(int surahNumber, int ayahNumber) async {
                       // Add this button for Abdul Basit recitation
                       if (ayah['surahNumber'] == 1) // Show only for Surah Al-Fatiha
                         IconButton(
-                          icon: Icon(
+                          icon: const Icon(
                             Icons.headphones,
-                            color: Colors.amber.shade800,
+                            color: AppColors.gold,
                           ),
                           tooltip: 'Listen to ${widget.selectedReciter ?? "Abdul Basit"}\'s recitation',
                           onPressed: () => _playReciterAudio(ayah['surahNumber'], ayah['ayahNumber']),
                         ),
-                      if (ayah['hasRecording']) 
-                        Tooltip(
+                      if (ayah['hasRecording'])
+                        const Tooltip(
                           message: 'You have a recording for this ayah',
                           child: Icon(
                             Icons.check_circle,
-                            color: Colors.green.shade600,
+                            color: AppColors.palm,
                           ),
                         ),
                       IconButton(
@@ -1332,14 +1242,14 @@ Future<String> _extractQariAudioToFile(int surahNumber, int ayahNumber) async {
                       ),
                     ],
                   ),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: AppSpacing.sm),
                   Text(
                     ayah['displayText'] ?? ayah['text'], // Use displayText if available, otherwise fallback to text
                     style: const TextStyle(
                       fontSize: 24,
-                      fontFamily: 'Scheherazade',
+                      fontFamily: 'Amiri Quran',
                       height: 1.8,
-                      color: Colors.black, // Added black color to make text more visible
+                      color: AppColors.ink,
                     ),
                     textDirection: TextDirection.rtl,
                     textAlign: TextAlign.right,
@@ -1381,8 +1291,8 @@ Future<String> _extractQariAudioToFile(int surahNumber, int ayahNumber) async {
           style: TextStyle(
             fontSize: 18,
             fontWeight: FontWeight.w500,
-            color: isCorrect ? Colors.black : Colors.red,
-            fontFamily: 'Scheherazade',
+            color: isCorrect ? AppColors.ink : AppColors.clay,
+            fontFamily: 'Amiri Quran',
           ),
         ),
       );
@@ -1486,18 +1396,11 @@ Widget _buildRecitationComparisonView() {
   final feedback = _styleComparisonResult!['feedback'] as List;
   
   return Container(
-    padding: const EdgeInsets.all(20),
+    padding: const EdgeInsets.all(AppSpacing.lg),
     decoration: BoxDecoration(
-      color: Colors.white,
-      borderRadius: BorderRadius.circular(16),
-      boxShadow: [
-        BoxShadow(
-          color: Colors.grey.withOpacity(0.3),
-          spreadRadius: 2,
-          blurRadius: 8,
-          offset: const Offset(0, 3),
-        ),
-      ],
+      color: AppColors.card,
+      borderRadius: AppRadius.lgBorder,
+      border: Border.all(color: AppColors.line),
     ),
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -1506,12 +1409,8 @@ Widget _buildRecitationComparisonView() {
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             Text(
-              'Recitation Style Analysis',
-              style: TextStyle(
-                fontSize: 22,
-                fontWeight: FontWeight.bold,
-                color: const Color(0xFF00A896),
-              ),
+              'Recitation style analysis',
+              style: Theme.of(context).textTheme.headlineSmall,
             ),
             IconButton(
               icon: const Icon(Icons.close),
@@ -1523,14 +1422,14 @@ Widget _buildRecitationComparisonView() {
             ),
           ],
         ),
-        const SizedBox(height: 20),
-        
+        const SizedBox(height: AppSpacing.md),
+
         // Overall score
         Container(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.all(AppSpacing.md),
           decoration: BoxDecoration(
-            color: const Color(0xFF00A896).withOpacity(0.1),
-            borderRadius: BorderRadius.circular(12),
+            color: AppColors.palmSoft,
+            borderRadius: AppRadius.mdBorder,
           ),
           child: Row(
             children: [
@@ -1540,13 +1439,6 @@ Widget _buildRecitationComparisonView() {
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   color: _getScoreColor(overallSimilarity),
-                  boxShadow: [
-                    BoxShadow(
-                      color: _getScoreColor(overallSimilarity).withOpacity(0.3),
-                      spreadRadius: 2,
-                      blurRadius: 4,
-                    ),
-                  ],
                 ),
                 child: Center(
                   child: Text(
@@ -1559,24 +1451,21 @@ Widget _buildRecitationComparisonView() {
                   ),
                 ),
               ),
-              const SizedBox(width: 20),
+              const SizedBox(width: AppSpacing.md),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
                       _getScoreMessage(overallSimilarity),
-                      style: const TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                      ),
+                      style: Theme.of(context).textTheme.titleMedium,
                     ),
-                    const SizedBox(height: 8),
+                    const SizedBox(height: AppSpacing.xs),
                     Text(
                       'Your recitation style compared to Sheikh Abdul Basit',
                       style: TextStyle(
                         fontSize: 14,
-                        color: Colors.grey[600],
+                        color: AppColors.inkSoft,
                       ),
                     ),
                   ],
@@ -1585,8 +1474,8 @@ Widget _buildRecitationComparisonView() {
             ],
           ),
         ),
-        
-        const SizedBox(height: 20),
+
+        const SizedBox(height: AppSpacing.md),
         
         // Melody and rhythm scores
         Row(
@@ -1635,23 +1524,19 @@ Widget _buildRecitationComparisonView() {
         
         // Feedback section
         Text(
-          'Personal Feedback',
-          style: TextStyle(
-            fontSize: 20,
-            fontWeight: FontWeight.bold,
-            color: const Color(0xFF00A896),
-          ),
+          'Personal feedback',
+          style: Theme.of(context).textTheme.titleLarge,
         ),
-        const SizedBox(height: 12),
-        
+        const SizedBox(height: AppSpacing.sm),
+
         for (var item in feedback)
           Padding(
             padding: const EdgeInsets.only(bottom: 8),
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Icon(Icons.tips_and_updates, 
-                  color: const Color(0xFF00A896),
+                const Icon(Icons.tips_and_updates,
+                  color: AppColors.gold,
                   size: 20,
                 ),
                 const SizedBox(width: 10),
@@ -1673,41 +1558,35 @@ Widget _buildRecitationComparisonView() {
             spacing: 16,
             runSpacing: 16,
             children: [
-              ElevatedButton.icon(
+              OutlinedButton.icon(
                 onPressed: () {
                   // Play user recording
                   if (_recordingPath != null) {
                     _playRecording(_recordingPath!);
                   }
                 },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.blue,
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                ),
                 icon: const Icon(Icons.person),
-                label: const Text('Play My Recitation'),
+                label: const Text('Play my recitation'),
               ),
-              
+
               ElevatedButton.icon(
                 onPressed: () {
                   // Play qari recitation
                   if (_currentAyah != null) {
                     _playReciterAudio(
-                      _currentAyah!['surahNumber'], 
+                      _currentAyah!['surahNumber'],
                       _currentAyah!['ayahNumber']
                     );
                   }
                 },
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.amber.shade800,
+                  backgroundColor: AppColors.gold,
                   foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                 ),
                 icon: const Icon(Icons.headphones),
-                label: const Text('Listen to Qari'),
+                label: const Text('Listen to qari'),
               ),
-              
+
               ElevatedButton.icon(
                 onPressed: () {
                   setState(() {
@@ -1715,13 +1594,8 @@ Widget _buildRecitationComparisonView() {
                     _startRecording(_currentAyah!);
                   });
                 },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.green,
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                ),
                 icon: const Icon(Icons.refresh),
-                label: const Text('Try Again'),
+                label: const Text('Try again'),
               ),
             ],
           ),
@@ -1732,14 +1606,10 @@ Widget _buildRecitationComparisonView() {
           const SizedBox(height: 30),
           
           Text(
-            'Word-by-Word Analysis',
-            style: TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-              color: const Color(0xFF00A896),
-            ),
+            'Word-by-word analysis',
+            style: Theme.of(context).textTheme.titleLarge,
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: AppSpacing.sm),
           
           Container(
             height: 200,
@@ -1759,7 +1629,7 @@ Widget _buildRecitationComparisonView() {
                         word,
                         style: TextStyle(
                           fontSize: 22,
-                          fontFamily: 'Scheherazade',
+                          fontFamily: 'Amiri Quran',
                         ),
                         textDirection: TextDirection.rtl,
                       ),
@@ -1771,7 +1641,7 @@ Widget _buildRecitationComparisonView() {
                           height: 24,
                           decoration: BoxDecoration(
                             borderRadius: BorderRadius.circular(12),
-                            color: Colors.grey.shade200,
+                            color: AppColors.parchmentRaised,
                           ),
                           child: Stack(
                             children: [
@@ -1811,21 +1681,21 @@ Widget _buildRecitationComparisonView() {
 
 Widget _buildScoreCard(String title, double score, IconData icon) {
   return Container(
-    padding: const EdgeInsets.all(12),
+    padding: const EdgeInsets.all(AppSpacing.sm),
     decoration: BoxDecoration(
-      color: Colors.white,
-      borderRadius: BorderRadius.circular(12),
-      border: Border.all(color: Colors.grey.shade300),
+      color: AppColors.card,
+      borderRadius: AppRadius.mdBorder,
+      border: Border.all(color: AppColors.line),
     ),
     child: Column(
       children: [
         Icon(icon, color: _getScoreColor(score)),
-        const SizedBox(height: 8),
+        const SizedBox(height: AppSpacing.sm),
         Text(
           title,
-          style: TextStyle(
+          style: const TextStyle(
             fontSize: 14,
-            color: Colors.grey[600],
+            color: AppColors.inkSoft,
           ),
         ),
         const SizedBox(height: 4),
@@ -1843,10 +1713,10 @@ Widget _buildScoreCard(String title, double score, IconData icon) {
 }
 
 Color _getScoreColor(double score) {
-  if (score >= 80) return Colors.green;
-  if (score >= 60) return Colors.blue;
-  if (score >= 40) return Colors.orange;
-  return Colors.red;
+  if (score >= 80) return AppColors.palm;
+  if (score >= 60) return AppColors.sage;
+  if (score >= 40) return AppColors.gold;
+  return AppColors.clay;
 }
 
 String _getScoreMessage(double score) {

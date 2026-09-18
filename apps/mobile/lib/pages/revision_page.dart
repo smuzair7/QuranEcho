@@ -10,6 +10,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as path;
 import 'dart:async';
 import 'package:QuranEcho/config/app_config.dart';
+import '../theme/app_theme.dart';
 
 class RevisionPage extends StatefulWidget {
   final List<Map<String, dynamic>> ayahs;
@@ -110,20 +111,16 @@ class _RevisionPageState extends State<RevisionPage> with SingleTickerProviderSt
         builder: (context) => StatefulBuilder(
           builder: (context, setState) {
             return AlertDialog(
-              backgroundColor: const Color(0xFF212121),
-              title: const Text(
-                'Revision Range',
-                style: TextStyle(color: Colors.white)
-              ),
+              title: const Text('Revision range'),
               content: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   // Revision range slider
-                  Text(
-                    'Select Ayah Range to Revise:',
-                    style: TextStyle(color: Colors.white70),
+                  const Text(
+                    'Select the ayah range to revise',
+                    style: TextStyle(color: AppColors.inkSoft),
                   ),
-                  const SizedBox(height: 8),
+                  const SizedBox(height: AppSpacing.sm),
                   RangeSlider(
                     values: RangeValues(startIndex.toDouble(), endIndex.toDouble()),
                     min: 0,
@@ -133,8 +130,8 @@ class _RevisionPageState extends State<RevisionPage> with SingleTickerProviderSt
                       'Ayah ${widget.ayahs[startIndex]['ayahNumber']}',
                       'Ayah ${widget.ayahs[endIndex]['ayahNumber']}',
                     ),
-                    activeColor: Colors.deepPurple,
-                    inactiveColor: Colors.grey.shade700,
+                    activeColor: AppColors.palm,
+                    inactiveColor: AppColors.line,
                     onChanged: (RangeValues values) {
                       setState(() {
                         startIndex = values.start.round();
@@ -142,10 +139,10 @@ class _RevisionPageState extends State<RevisionPage> with SingleTickerProviderSt
                       });
                     },
                   ),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: AppSpacing.md),
                   Text(
                     'From Ayah ${widget.ayahs[startIndex]['ayahNumber']} to Ayah ${widget.ayahs[endIndex]['ayahNumber']}',
-                    style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                    style: const TextStyle(color: AppColors.ink, fontWeight: FontWeight.bold),
                     textAlign: TextAlign.center,
                   ),
                 ],
@@ -156,7 +153,7 @@ class _RevisionPageState extends State<RevisionPage> with SingleTickerProviderSt
                     Navigator.pop(context);
                     Navigator.pop(context); // Return to previous page
                   },
-                  child: const Text('Cancel', style: TextStyle(color: Colors.white70)),
+                  child: const Text('Cancel'),
                 ),
                 ElevatedButton(
                   onPressed: () {
@@ -169,10 +166,7 @@ class _RevisionPageState extends State<RevisionPage> with SingleTickerProviderSt
                       _recordingStatus = 'Tap to start revising';
                     });
                   },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.deepPurple,
-                  ),
-                  child: const Text('Start Revision'),
+                  child: const Text('Start revision'),
                 ),
               ],
             );
@@ -492,9 +486,9 @@ class _RevisionPageState extends State<RevisionPage> with SingleTickerProviderSt
           text: i < transcriptionWords.length - 1 ? '$currentWord ' : currentWord,
           style: TextStyle(
             fontSize: textSize,
-            fontFamily: 'Scheherazade',
+            fontFamily: 'Amiri Quran',
             fontWeight: FontWeight.w500,
-            color: isCorrect ? Colors.green : Colors.red,
+            color: isCorrect ? AppColors.palm : AppColors.clay,
           ),
         ),
       );
@@ -534,175 +528,138 @@ class _RevisionPageState extends State<RevisionPage> with SingleTickerProviderSt
     final currentPosition = _currentIndex - _startIndex + 1;
     
     return Scaffold(
+      backgroundColor: AppColors.parchment,
       appBar: AppBar(
         title: Text('Revision: ${widget.surahName}'),
-        backgroundColor: Colors.deepPurple,
         actions: [
           IconButton(
-            icon: const Icon(Icons.settings),
+            icon: const Icon(Icons.tune_rounded),
             onPressed: _showSetupDialog,
-            tooltip: 'Change Range',
+            tooltip: 'Change range',
           ),
         ],
       ),
-      body: Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [
-              Colors.deepPurple.withOpacity(0.2),
-              const Color(0xFF121212),
-            ],
-          ),
-        ),
-        child: Column(
-          children: [
-            // Progress indicator
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
-              color: const Color(0xFF212121),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        'Revision Progress',
-                        style: const TextStyle(
-                          fontWeight: FontWeight.bold, 
-                          fontSize: 16,
-                          color: Colors.white,
-                        ),
-                      ),
-                      Text(
-                        '$currentPosition of $totalAyahs',
-                        style: const TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 14,
-                          color: Colors.deepPurple,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(4),
-                    child: LinearProgressIndicator(
-                      value: totalAyahs > 0 ? currentPosition / totalAyahs : 0,
-                      backgroundColor: Colors.grey.shade800,
-                      valueColor: AlwaysStoppedAnimation<Color>(Colors.deepPurple),
-                      minHeight: 8,
+      body: Column(
+        children: [
+          // Progress indicator
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(
+              vertical: AppSpacing.sm,
+              horizontal: AppSpacing.md,
+            ),
+            color: AppColors.card,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text(
+                      'Revision progress',
+                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
                     ),
+                    Text(
+                      '$currentPosition of $totalAyahs',
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 14,
+                        color: AppColors.palm,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: AppSpacing.sm),
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(4),
+                  child: LinearProgressIndicator(
+                    value: totalAyahs > 0 ? currentPosition / totalAyahs : 0,
+                    backgroundColor: AppColors.line,
+                    valueColor: const AlwaysStoppedAnimation<Color>(AppColors.palm),
+                    minHeight: 8,
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          // Main content area
+          Expanded(
+            child: _isFlowRecordingMode
+                ? _buildFlowRecordingView()
+                : _buildPreparationView(),
+          ),
+
+          // Bottom controls
+          if (!_isFlowRecordingMode)
+            Container(
+              padding: const EdgeInsets.symmetric(
+                vertical: AppSpacing.lg,
+                horizontal: AppSpacing.md,
+              ),
+              decoration: const BoxDecoration(
+                color: AppColors.card,
+                border: Border(top: BorderSide(color: AppColors.line)),
+              ),
+              child: Center(
+                child: ElevatedButton.icon(
+                  onPressed: _startFlowRecording,
+                  icon: const Icon(Icons.mic_rounded, size: 26),
+                  label: const Text(
+                    'Start flow recitation',
+                    style: TextStyle(fontSize: 16),
+                  ),
+                ),
+              ),
+            ),
+
+          // Recording controls when in flow recording mode
+          if (_isFlowRecordingMode)
+            Container(
+              padding: const EdgeInsets.symmetric(
+                vertical: AppSpacing.lg,
+                horizontal: AppSpacing.md,
+              ),
+              decoration: const BoxDecoration(
+                color: AppColors.card,
+                border: Border(top: BorderSide(color: AppColors.line)),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
+                  // Stop flow recording button
+                  OutlinedButton.icon(
+                    onPressed: _stopFlowRecording,
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: AppColors.clay,
+                      side: const BorderSide(color: AppColors.clay),
+                    ),
+                    icon: const Icon(Icons.stop_rounded),
+                    label: const Text('Stop'),
+                  ),
+
+                  // Next ayah button
+                  ElevatedButton.icon(
+                    onPressed: _isRecording ? _moveToNextAyahInFlow : null,
+                    icon: const Icon(Icons.arrow_forward_rounded),
+                    label: const Text('Next ayah'),
                   ),
                 ],
               ),
             ),
-            
-            // Main content area
-            Expanded(
-              child: _isFlowRecordingMode
-                  ? _buildFlowRecordingView()
-                  : _buildPreparationView(),
-            ),
-            
-            // Bottom controls
-            if (!_isFlowRecordingMode)
-              Container(
-                padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF212121),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.4),
-                      spreadRadius: 1,
-                      blurRadius: 5,
-                      offset: const Offset(0, -3),
-                    ),
-                  ],
-                ),
-                child: Center(
-                  child: ElevatedButton.icon(
-                    onPressed: _startFlowRecording,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.deepPurple,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 24),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(50),
-                      ),
-                    ),
-                    icon: const Icon(Icons.mic, size: 28),
-                    label: const Text(
-                      'Start Flow Recitation',
-                      style: TextStyle(fontSize: 18),
-                    ),
-                  ),
-                ),
-              ),
-            
-            // Recording controls when in flow recording mode
-            if (_isFlowRecordingMode)
-              Container(
-                padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF212121),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.4),
-                      spreadRadius: 1,
-                      blurRadius: 5,
-                      offset: const Offset(0, -3),
-                    ),
-                  ],
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                  children: [
-                    // Stop flow recording button
-                    ElevatedButton.icon(
-                      onPressed: _stopFlowRecording,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.red,
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 20),
-                      ),
-                      icon: const Icon(Icons.stop),
-                      label: const Text('Stop'),
-                    ),
-                    
-                    // Next ayah button
-                    ElevatedButton.icon(
-                      onPressed: _isRecording ? _moveToNextAyahInFlow : null,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.green,
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 20),
-                      ),
-                      icon: const Icon(Icons.arrow_forward),
-                      label: const Text('Next Ayah'),
-                    ),
-                  ],
-                ),
-              ),
-          ],
-        ),
+        ],
       ),
     );
   }
 
   Widget _buildRevisionCard(Map<String, dynamic> ayah) {
     return Card(
-      elevation: 4,
-      color: Colors.white,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-        side: BorderSide(color: Colors.deepPurple, width: 2),
+        borderRadius: AppRadius.mdBorder,
+        side: const BorderSide(color: AppColors.palm, width: 2),
       ),
       child: Padding(
-        padding: const EdgeInsets.all(16.0),
+        padding: const EdgeInsets.all(AppSpacing.md),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -710,47 +667,47 @@ class _RevisionPageState extends State<RevisionPage> with SingleTickerProviderSt
               children: [
                 Container(
                   padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: Colors.deepPurple,
+                  decoration: const BoxDecoration(
+                    color: AppColors.palm,
                     shape: BoxShape.circle,
                   ),
                   child: Text(
                     '${ayah['ayahNumber']}',
                     style: const TextStyle(
-                      color: Colors.white,
+                      color: AppColors.parchment,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
                 ),
-                const SizedBox(width: 12),
-                Text(
+                const SizedBox(width: AppSpacing.sm),
+                const Text(
                   'Revision',
                   style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
-                    color: Colors.deepPurple,
+                    color: AppColors.palm,
                   ),
                 ),
               ],
             ),
-            const SizedBox(height: 16),
-            
+            const SizedBox(height: AppSpacing.md),
+
             // Show text only if visible
             if (_isTextVisible)
               Text(
                 ayah['displayText'] ?? ayah['text'],
-                style: TextStyle(
+                style: const TextStyle(
                   fontSize: 26,
-                  fontFamily: 'Scheherazade',
+                  fontFamily: 'Amiri Quran',
                   height: 1.8,
-                  color: Colors.black,
+                  color: AppColors.ink,
                 ),
                 textDirection: TextDirection.rtl,
                 textAlign: TextAlign.right,
               ),
-              
-            const SizedBox(height: 16),
-            
+
+            const SizedBox(height: AppSpacing.md),
+
             // Status text
             Center(
               child: Text(
@@ -762,9 +719,9 @@ class _RevisionPageState extends State<RevisionPage> with SingleTickerProviderSt
                 ),
               ),
             ),
-              
-            const SizedBox(height: 16),
-              
+
+            const SizedBox(height: AppSpacing.md),
+
             // Recording controls
             Center(
               child: Row(
@@ -776,70 +733,67 @@ class _RevisionPageState extends State<RevisionPage> with SingleTickerProviderSt
                       ? () => _stopRecording(ayah)
                       : () => _startRecording(ayah)),
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: _isRecording ? Colors.red : Colors.deepPurple,
-                      foregroundColor: Colors.white,
+                      backgroundColor: _isRecording ? AppColors.clay : AppColors.palm,
+                      foregroundColor: AppColors.parchment,
                       padding: const EdgeInsets.all(12),
                       shape: const CircleBorder(),
                     ),
                     child: Icon(
-                      _isRecording ? Icons.stop : Icons.mic,
+                      _isRecording ? Icons.stop_rounded : Icons.mic_rounded,
                       size: 28,
                     ),
                   ),
                 ],
               ),
             ),
-              
+
             // API processing status
             if (_isProcessing) ...[
-              const SizedBox(height: 20),
+              const SizedBox(height: AppSpacing.lg),
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   const SizedBox(
                     width: 24,
                     height: 24,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                      valueColor: AlwaysStoppedAnimation<Color>(Colors.deepPurple),
-                    ),
+                    child: CircularProgressIndicator(strokeWidth: 2),
                   ),
-                  const SizedBox(width: 10),
+                  const SizedBox(width: AppSpacing.sm),
                   Flexible(
                     child: Text(
                       _apiResult ?? "Processing recitation...",
                       style: const TextStyle(
                         fontSize: 14,
                         fontStyle: FontStyle.italic,
+                        color: AppColors.inkSoft,
                       ),
                     ),
                   ),
                 ],
               ),
             ],
-              
+
             // Show transcription results if available
             if (_transcriptions.isNotEmpty) ...[
-              const SizedBox(height: 20),
+              const SizedBox(height: AppSpacing.lg),
               Container(
                 width: double.infinity,
-                padding: const EdgeInsets.all(12),
+                padding: const EdgeInsets.all(AppSpacing.sm),
                 decoration: BoxDecoration(
-                  color: Colors.purple.shade50,
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: Colors.purple.shade200),
+                  color: AppColors.palmSoft,
+                  borderRadius: AppRadius.smBorder,
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
+                    const Text(
                       'Your recitation:',
                       style: TextStyle(
                         fontWeight: FontWeight.bold,
-                        color: Colors.purple.shade800,
+                        color: AppColors.palmDeep,
                       ),
                     ),
-                    const SizedBox(height: 8),
+                    const SizedBox(height: AppSpacing.sm),
                     _buildTranscriptionWithHighlightedErrors(_transcriptions.last, ayah),
                   ],
                 ),
@@ -853,68 +807,56 @@ class _RevisionPageState extends State<RevisionPage> with SingleTickerProviderSt
 
   Widget _buildPreparationView() {
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(AppSpacing.md),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // Full range of ayahs in book format
           Card(
-            color: Colors.white,
-            elevation: 4,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
-            ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 // Header
                 Container(
                   width: double.infinity,
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: Colors.deepPurple.shade50,
+                  padding: const EdgeInsets.all(AppSpacing.sm),
+                  decoration: const BoxDecoration(
+                    color: AppColors.palmSoft,
                     borderRadius: BorderRadius.only(
-                      topLeft: Radius.circular(12),
-                      topRight: Radius.circular(12),
+                      topLeft: Radius.circular(AppRadius.md),
+                      topRight: Radius.circular(AppRadius.md),
                     ),
                     border: Border(
-                      bottom: BorderSide(color: Colors.deepPurple.shade200),
+                      bottom: BorderSide(color: AppColors.line),
                     ),
                   ),
                   child: Column(
                     children: [
                       Text(
                         'Ayah ${widget.ayahs[_startIndex]['ayahNumber']} - ${widget.ayahs[_endIndex]['ayahNumber']}',
-                        style: TextStyle(
+                        style: const TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.bold,
-                          color: Colors.deepPurple.shade800,
+                          color: AppColors.palmDeep,
                         ),
                       ),
                       const SizedBox(height: 4),
-                      Text(
+                      const Text(
                         'Review before starting',
                         style: TextStyle(
                           fontSize: 14,
-                          color: Colors.deepPurple.shade600,
+                          color: AppColors.palm,
                         ),
                       ),
                     ],
                   ),
                 ),
-                
+
                 // Continuous ayahs text in book format
                 Container(
                   width: double.infinity,
-                  padding: const EdgeInsets.all(20),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    image: DecorationImage(
-                      image: AssetImage('assets/images/paper_texture.png'),
-                      fit: BoxFit.cover,
-                      opacity: 0.05,
-                    ),
-                  ),
+                  padding: const EdgeInsets.all(AppSpacing.lg),
+                  color: AppColors.card,
                   child: Column(
                     children: [
                       RichText(
@@ -923,14 +865,14 @@ class _RevisionPageState extends State<RevisionPage> with SingleTickerProviderSt
                         text: TextSpan(
                           style: const TextStyle(
                             fontSize: 24,
-                            fontFamily: 'Scheherazade',
+                            fontFamily: 'Amiri Quran',
                             height: 1.8,
-                            color: Colors.black,
+                            color: AppColors.ink,
                           ),
                           children: List.generate(_endIndex - _startIndex + 1, (index) {
                             final ayahIndex = _startIndex + index;
                             final ayah = widget.ayahs[ayahIndex];
-                            
+
                             return TextSpan(
                               children: [
                                 TextSpan(
@@ -942,21 +884,23 @@ class _RevisionPageState extends State<RevisionPage> with SingleTickerProviderSt
                                   child: Container(
                                     margin: const EdgeInsets.symmetric(horizontal: 4),
                                     padding: const EdgeInsets.all(4),
-                                    decoration: BoxDecoration(
+                                    decoration: const BoxDecoration(
                                       shape: BoxShape.circle,
-                                      border: Border.all(color: Colors.deepPurple),
+                                      border: Border.fromBorderSide(
+                                        BorderSide(color: AppColors.palm),
+                                      ),
                                     ),
                                     child: Text(
                                       '${ayah['ayahNumber']}',
-                                      style: TextStyle(
+                                      style: const TextStyle(
                                         fontSize: 14,
-                                        color: Colors.deepPurple,
+                                        color: AppColors.palm,
                                       ),
                                     ),
                                   ),
                                 ),
                                 // Add space between ayahs
-                                TextSpan(text: ' '),
+                                const TextSpan(text: ' '),
                               ],
                             );
                           }),
@@ -968,62 +912,39 @@ class _RevisionPageState extends State<RevisionPage> with SingleTickerProviderSt
               ],
             ),
           ),
-          
-          const SizedBox(height: 24),
-          
-          // // Central start button
-          // Center(
-          //   child: ElevatedButton.icon(
-          //     onPressed: _startFlowRecording,
-          //     style: ElevatedButton.styleFrom(
-          //       backgroundColor: Colors.deepPurple,
-          //       foregroundColor: Colors.white,
-          //       padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 24),
-          //       shape: RoundedRectangleBorder(
-          //         borderRadius: BorderRadius.circular(50),
-          //       ),
-          //       elevation: 5,
-          //     ),
-          //     icon: const Icon(Icons.mic, size: 28),
-          //     label: const Text(
-          //       'Start Flow Recitation',
-          //       style: TextStyle(fontSize: 18),
-          //     ),
-          //   ),
-          // ),
-          
-          // const SizedBox(height: 24),
-          
+
+          const SizedBox(height: AppSpacing.lg),
+
           // Instructions moved below start button
           ExpansionTile(
-            title: Text(
-              'How Flow Recitation Works',
+            title: const Text(
+              'How flow recitation works',
               style: TextStyle(
                 fontWeight: FontWeight.bold,
-                color: Colors.deepPurple,
+                color: AppColors.palm,
               ),
             ),
-            tilePadding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            tilePadding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: AppSpacing.xs),
             shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
-              side: BorderSide(color: Colors.deepPurple.shade200),
+              borderRadius: AppRadius.mdBorder,
+              side: const BorderSide(color: AppColors.line),
             ),
-            backgroundColor: Colors.white,
-            collapsedBackgroundColor: Colors.white,
+            backgroundColor: AppColors.card,
+            collapsedBackgroundColor: AppColors.card,
             children: [
               Padding(
-                padding: const EdgeInsets.all(16),
+                padding: const EdgeInsets.all(AppSpacing.md),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
+                    const Text(
                       'In this mode, you will recite continuously without pausing between ayahs. The app will:',
                       style: TextStyle(
                         fontSize: 15,
-                        color: Colors.grey.shade800,
+                        color: AppColors.inkSoft,
                       ),
                     ),
-                    const SizedBox(height: 8),
+                    const SizedBox(height: AppSpacing.sm),
                     ...[
                       '1. Show one ayah at a time for you to recite',
                       '2. Process your recitation while you continue to the next ayah',
@@ -1034,13 +955,13 @@ class _RevisionPageState extends State<RevisionPage> with SingleTickerProviderSt
                       child: Row(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          SizedBox(width: 8),
+                          const SizedBox(width: AppSpacing.sm),
                           Expanded(
                             child: Text(
                               text,
-                              style: TextStyle(
+                              style: const TextStyle(
                                 fontSize: 14,
-                                color: Colors.grey.shade800,
+                                color: AppColors.inkSoft,
                               ),
                             ),
                           ),
@@ -1082,38 +1003,31 @@ class _RevisionPageState extends State<RevisionPage> with SingleTickerProviderSt
           AnimatedBuilder(
             animation: _animationController,
             builder: (context, child) {
+              final isReturning = _navigationMessage.contains("Returning");
               return Container(
-                padding: EdgeInsets.symmetric(vertical: 12, horizontal: 20),
-                margin: EdgeInsets.all(16),
+                padding: const EdgeInsets.symmetric(
+                  vertical: AppSpacing.sm,
+                  horizontal: AppSpacing.md,
+                ),
+                margin: const EdgeInsets.all(AppSpacing.md),
                 decoration: BoxDecoration(
-                  color: _navigationMessage.contains("Returning") 
-                      ? Colors.red.withOpacity(0.9)
-                      : Colors.deepPurple.withOpacity(0.9),
-                  borderRadius: BorderRadius.circular(12),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black26,
-                      blurRadius: 10,
-                      offset: Offset(0, 5),
-                    ),
-                  ],
+                  color: isReturning ? AppColors.clay : AppColors.palm,
+                  borderRadius: AppRadius.mdBorder,
                 ),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Icon(
-                      _navigationMessage.contains("Returning")
-                          ? Icons.arrow_back
-                          : Icons.arrow_forward,
-                      color: Colors.white,
+                      isReturning ? Icons.arrow_back_rounded : Icons.arrow_forward_rounded,
+                      color: AppColors.parchment,
                       size: 24 * _animationController.value,
                     ),
-                    SizedBox(width: 12),
+                    const SizedBox(width: AppSpacing.sm),
                     Expanded(
                       child: Text(
                         _navigationMessage,
-                        style: TextStyle(
-                          color: Colors.white,
+                        style: const TextStyle(
+                          color: AppColors.parchment,
                           fontWeight: FontWeight.bold,
                           fontSize: 16,
                         ),
@@ -1128,22 +1042,20 @@ class _RevisionPageState extends State<RevisionPage> with SingleTickerProviderSt
         // Current ayah card
         Expanded(
           child: SingleChildScrollView(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.all(AppSpacing.md),
             child: Column(
               children: [
                 // Current ayah to recite
                 Card(
-                  elevation: 4,
-                  color: Colors.white,
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: AppRadius.mdBorder,
                     side: BorderSide(
                       color: _getStatusColor(ayahStatus),
                       width: 2,
                     ),
                   ),
                   child: Padding(
-                    padding: const EdgeInsets.all(16.0),
+                    padding: const EdgeInsets.all(AppSpacing.md),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -1161,12 +1073,12 @@ class _RevisionPageState extends State<RevisionPage> with SingleTickerProviderSt
                                   child: Text(
                                     '${currentAyah['ayahNumber']}',
                                     style: const TextStyle(
-                                      color: Colors.white,
+                                      color: AppColors.parchment,
                                       fontWeight: FontWeight.bold,
                                     ),
                                   ),
                                 ),
-                                const SizedBox(width: 12),
+                                const SizedBox(width: AppSpacing.sm),
                                 Text(
                                   'Reciting',
                                   style: TextStyle(
@@ -1180,64 +1092,59 @@ class _RevisionPageState extends State<RevisionPage> with SingleTickerProviderSt
                             _buildStatusIndicator(ayahStatus),
                           ],
                         ),
-                        const SizedBox(height: 16),
-                        
+                        const SizedBox(height: AppSpacing.md),
+
                         // Add a prominent error message when needed
-                        if (_errorMessageVisible) 
+                        if (_errorMessageVisible)
                           Container(
-                            margin: EdgeInsets.symmetric(vertical: 12),
-                            padding: EdgeInsets.all(16),
+                            margin: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
+                            padding: const EdgeInsets.all(AppSpacing.md),
                             width: double.infinity,
                             decoration: BoxDecoration(
-                              color: Colors.red.shade100,
-                              borderRadius: BorderRadius.circular(8),
-                              border: Border.all(color: Colors.red),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.red.withOpacity(0.3),
-                                  blurRadius: 8,
-                                  spreadRadius: 2,
-                                ),
-                              ],
+                              color: AppColors.claySoft,
+                              borderRadius: AppRadius.smBorder,
+                              border: Border.all(color: AppColors.clay),
                             ),
                             child: Column(
                               children: [
                                 Row(
                                   children: [
-                                    Icon(Icons.warning_amber_rounded, color: Colors.red, size: 28),
-                                    SizedBox(width: 12),
+                                    const Icon(Icons.warning_amber_rounded, color: AppColors.clay, size: 28),
+                                    const SizedBox(width: AppSpacing.sm),
                                     Expanded(
                                       child: Text(
                                         _errorFeedback,
-                                        style: TextStyle(
+                                        style: const TextStyle(
                                           fontSize: 18,
                                           fontWeight: FontWeight.bold,
-                                          color: Colors.red.shade900,
+                                          color: AppColors.clay,
                                         ),
                                       ),
                                     ),
                                   ],
                                 ),
-                                SizedBox(height: 8),
+                                const SizedBox(height: AppSpacing.sm),
                                 Align(
                                   alignment: Alignment.centerLeft,
-                                  child: AnimatedContainer(
-                                    duration: Duration(milliseconds: 800),
-                                    padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                                    decoration: BoxDecoration(
-                                      color: Colors.white,
-                                      borderRadius: BorderRadius.circular(20),
-                                      border: Border.all(color: Colors.red.shade300),
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: AppSpacing.sm,
+                                      vertical: AppSpacing.xs,
                                     ),
-                                    child: Row(
+                                    decoration: BoxDecoration(
+                                      color: AppColors.card,
+                                      borderRadius: AppRadius.lgBorder,
+                                      border: Border.all(color: AppColors.clay),
+                                    ),
+                                    child: const Row(
                                       mainAxisSize: MainAxisSize.min,
                                       children: [
-                                        Icon(Icons.mic, color: Colors.red),
-                                        SizedBox(width: 8),
+                                        Icon(Icons.mic_rounded, color: AppColors.clay),
+                                        SizedBox(width: AppSpacing.xs),
                                         Text(
                                           "Recording will restart in 3 seconds",
                                           style: TextStyle(
-                                            color: Colors.red.shade800,
+                                            color: AppColors.clay,
                                             fontWeight: FontWeight.w500,
                                           ),
                                         ),
@@ -1255,33 +1162,33 @@ class _RevisionPageState extends State<RevisionPage> with SingleTickerProviderSt
                             currentAyah['displayText'] ?? currentAyah['text'],
                             style: TextStyle(
                               fontSize: 26,
-                              fontFamily: 'Scheherazade',
+                              fontFamily: 'Amiri Quran',
                               height: 1.8,
-                              color: _errorMessageVisible ? Colors.red.shade900 : Colors.black,
-                              backgroundColor: _errorMessageVisible ? Colors.red.shade50 : null,
+                              color: _errorMessageVisible ? AppColors.clay : AppColors.ink,
+                              backgroundColor: _errorMessageVisible ? AppColors.claySoft : null,
                             ),
                             textDirection: TextDirection.rtl,
                             textAlign: TextAlign.right,
                           ),
-                          
+
                         if (!_isTextVisible && ayahStatus != AyahStatus.correct)
                           Container(
                             width: double.infinity,
-                            padding: const EdgeInsets.symmetric(vertical: 40),
+                            padding: const EdgeInsets.symmetric(vertical: AppSpacing.xl),
                             child: const Center(
                               child: Text(
                                 'Recite from memory...',
                                 style: TextStyle(
                                   fontSize: 18,
                                   fontStyle: FontStyle.italic,
-                                  color: Colors.grey,
+                                  color: AppColors.inkSoft,
                                 ),
                               ),
                             ),
                           ),
-                          
-                        const SizedBox(height: 16),
-                        
+
+                        const SizedBox(height: AppSpacing.md),
+
                         // Status text
                         Center(
                           child: Text(
@@ -1298,37 +1205,32 @@ class _RevisionPageState extends State<RevisionPage> with SingleTickerProviderSt
                     ),
                   ),
                 ),
-                
-                const SizedBox(height: 20),
-                
-                // Results section - show ALL previous ayahs with results, most recent first
-const SizedBox(height: 20),
-Text(
-  'Previous Recitations',
-  style: TextStyle(
-    fontSize: 18,
-    fontWeight: FontWeight.bold,
-    color: Colors.deepPurple,
-  ),
-),
-const SizedBox(height: 12),
 
-// Generate a list of previous ayah indices and reverse it to show most recent first
-...List.generate(_currentRecitingIndex - _startIndex, (index) {
-  // Reverse the order by calculating index from the end
-  final reversedIndex = _currentRecitingIndex - _startIndex - 1 - index;
-  final previousAyahIndex = _startIndex + reversedIndex;
-  
-  // Only display ayahs that have been processed
-  if (!_pendingTranscriptions.containsKey(previousAyahIndex)) {
-    return SizedBox.shrink();
-  }
-  
-  return Padding(
-    padding: const EdgeInsets.only(bottom: 12.0),
-    child: _buildResultCard(previousAyahIndex),
-  );
-}),
+                const SizedBox(height: AppSpacing.lg),
+
+                // Results section - show ALL previous ayahs with results, most recent first
+                Text(
+                  'Previous recitations',
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
+                const SizedBox(height: AppSpacing.sm),
+
+                // Generate a list of previous ayah indices and reverse it to show most recent first
+                ...List.generate(_currentRecitingIndex - _startIndex, (index) {
+                  // Reverse the order by calculating index from the end
+                  final reversedIndex = _currentRecitingIndex - _startIndex - 1 - index;
+                  final previousAyahIndex = _startIndex + reversedIndex;
+
+                  // Only display ayahs that have been processed
+                  if (!_pendingTranscriptions.containsKey(previousAyahIndex)) {
+                    return const SizedBox.shrink();
+                  }
+
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+                    child: _buildResultCard(previousAyahIndex),
+                  );
+                }),
               ],
             ),
           ),
@@ -1343,24 +1245,20 @@ const SizedBox(height: 12),
     final hasScore = _matchScores.containsKey(ayahIndex);
     final score = hasScore ? _matchScores[ayahIndex]! : 0;
     final isCorrect = hasScore && score >= 70;
-    
+
     if (!isCorrect) {
       return Stack(
         children: [
           // Your existing Card...
           Card(
-            elevation: 2, // Reduced elevation
-            margin: EdgeInsets.symmetric(vertical: 4), // Tighter margins
-            color: isCorrect ? Colors.green.shade50 : Colors.red.shade50,
+            margin: const EdgeInsets.symmetric(vertical: 4), // Tighter margins
+            color: AppColors.claySoft,
             shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(8), // Smaller radius
-              side: BorderSide(
-                color: isCorrect ? Colors.green.shade300 : Colors.red.shade300,
-                width: 1,
-              ),
+              borderRadius: AppRadius.smBorder,
+              side: const BorderSide(color: AppColors.clay, width: 1),
             ),
             child: Padding(
-              padding: const EdgeInsets.all(12.0), // Reduced padding
+              padding: const EdgeInsets.all(AppSpacing.sm),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -1370,28 +1268,28 @@ const SizedBox(height: 12),
                       // Smaller number badge
                       Container(
                         padding: const EdgeInsets.all(5),
-                        decoration: BoxDecoration(
-                          color: isCorrect ? Colors.green : Colors.red,
+                        decoration: const BoxDecoration(
+                          color: AppColors.clay,
                           shape: BoxShape.circle,
                         ),
                         child: Text(
                           '${ayah['ayahNumber']}',
                           style: const TextStyle(
-                            color: Colors.white,
+                            color: AppColors.parchment,
                             fontWeight: FontWeight.bold,
                             fontSize: 12,
                           ),
                         ),
                       ),
-                      const SizedBox(width: 8),
+                      const SizedBox(width: AppSpacing.sm),
                       // Text takes less space
-                      Expanded(
+                      const Expanded(
                         child: Text(
-                          isCorrect ? 'Correct' : 'Needs Improvement',
+                          'Needs improvement',
                           style: TextStyle(
                             fontSize: 14,
                             fontWeight: FontWeight.bold,
-                            color: isCorrect ? Colors.green.shade800 : Colors.red.shade800,
+                            color: AppColors.clay,
                           ),
                         ),
                       ),
@@ -1399,53 +1297,52 @@ const SizedBox(height: 12),
                       if (hasScore)
                         Container(
                           padding: const EdgeInsets.symmetric(
-                            horizontal: 8, 
+                            horizontal: AppSpacing.sm,
                             vertical: 4,
                           ),
                           decoration: BoxDecoration(
-                            color: isCorrect ? Colors.green.shade100 : Colors.red.shade100,
+                            color: AppColors.claySoft,
                             borderRadius: BorderRadius.circular(12),
-                            border: Border.all(
-                              color: isCorrect ? Colors.green : Colors.red,
-                              width: 0.5,
+                            border: const Border.fromBorderSide(
+                              BorderSide(color: AppColors.clay, width: 0.5),
                             ),
                           ),
                           child: Text(
                             '$score%',
-                            style: TextStyle(
+                            style: const TextStyle(
                               fontWeight: FontWeight.bold,
                               fontSize: 12,
-                              color: isCorrect ? Colors.green.shade800 : Colors.red.shade800,
+                              color: AppColors.clay,
                             ),
                           ),
                         ),
                     ],
                   ),
-                  
+
                   // Use an expandable section for the ayah text
                   ExpansionTile(
-                    tilePadding: EdgeInsets.symmetric(horizontal: 8, vertical: 0),
-                    title: Text(
-                      'View Ayah Text',
+                    tilePadding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm, vertical: 0),
+                    title: const Text(
+                      'View ayah text',
                       style: TextStyle(
                         fontSize: 13,
                         fontWeight: FontWeight.w500,
-                        color: Colors.grey.shade700,
+                        color: AppColors.inkSoft,
                       ),
                     ),
                     children: [
                       Container(
-                        padding: const EdgeInsets.all(8),
+                        padding: const EdgeInsets.all(AppSpacing.sm),
                         decoration: BoxDecoration(
-                          color: Colors.white,
+                          color: AppColors.card,
                           borderRadius: BorderRadius.circular(4),
-                          border: Border.all(color: Colors.grey.shade200),
+                          border: Border.all(color: AppColors.line),
                         ),
                         child: Text(
                           ayah['displayText'] ?? ayah['text'],
                           style: const TextStyle(
                             fontSize: 16, // Smaller font size
-                            fontFamily: 'Scheherazade',
+                            fontFamily: 'Amiri Quran',
                           ),
                           textDirection: TextDirection.rtl,
                           textAlign: TextAlign.right,
@@ -1453,25 +1350,25 @@ const SizedBox(height: 12),
                       ),
                     ],
                   ),
-                  
+
                   // Your recitation display
                   Container(
-                    padding: const EdgeInsets.all(8),
-                    margin: const EdgeInsets.only(top: 8),
+                    padding: const EdgeInsets.all(AppSpacing.sm),
+                    margin: const EdgeInsets.only(top: AppSpacing.sm),
                     decoration: BoxDecoration(
-                      color: Colors.white,
+                      color: AppColors.card,
                       borderRadius: BorderRadius.circular(4),
-                      border: Border.all(color: isCorrect ? Colors.green.shade200 : Colors.red.shade200),
+                      border: Border.all(color: AppColors.clay.withOpacity(0.4)),
                     ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
+                        const Text(
                           'Your recitation:',
                           style: TextStyle(
                             fontWeight: FontWeight.bold,
                             fontSize: 13,
-                            color: isCorrect ? Colors.green.shade800 : Colors.red.shade800,
+                            color: AppColors.clay,
                           ),
                         ),
                         const SizedBox(height: 4),
@@ -1492,27 +1389,27 @@ const SizedBox(height: 12),
             top: 0,
             right: 0,
             child: Container(
-              padding: EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: Colors.red.shade600,
+              padding: const EdgeInsets.all(AppSpacing.sm),
+              decoration: const BoxDecoration(
+                color: AppColors.clay,
                 borderRadius: BorderRadius.only(
-                  topRight: Radius.circular(8),
-                  bottomLeft: Radius.circular(12),
+                  topRight: Radius.circular(AppRadius.sm),
+                  bottomLeft: Radius.circular(AppRadius.md),
                 ),
               ),
-              child: Row(
+              child: const Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Icon(
-                    Icons.replay,
-                    color: Colors.white,
+                    Icons.replay_rounded,
+                    color: AppColors.parchment,
                     size: 16,
                   ),
                   SizedBox(width: 4),
                   Text(
                     "Return",
                     style: TextStyle(
-                      color: Colors.white,
+                      color: AppColors.parchment,
                       fontWeight: FontWeight.bold,
                       fontSize: 12,
                     ),
@@ -1524,21 +1421,17 @@ const SizedBox(height: 12),
         ],
       );
     }
-    
+
     // Return your existing Card for correct ayahs...
     return Card(
-      elevation: 2, // Reduced elevation
-      margin: EdgeInsets.symmetric(vertical: 4), // Tighter margins
-      color: isCorrect ? Colors.green.shade50 : Colors.red.shade50,
+      margin: const EdgeInsets.symmetric(vertical: 4), // Tighter margins
+      color: AppColors.palmSoft,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(8), // Smaller radius
-        side: BorderSide(
-          color: isCorrect ? Colors.green.shade300 : Colors.red.shade300,
-          width: 1,
-        ),
+        borderRadius: AppRadius.smBorder,
+        side: const BorderSide(color: AppColors.palm, width: 1),
       ),
       child: Padding(
-        padding: const EdgeInsets.all(12.0), // Reduced padding
+        padding: const EdgeInsets.all(AppSpacing.sm),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -1548,28 +1441,28 @@ const SizedBox(height: 12),
                 // Smaller number badge
                 Container(
                   padding: const EdgeInsets.all(5),
-                  decoration: BoxDecoration(
-                    color: isCorrect ? Colors.green : Colors.red,
+                  decoration: const BoxDecoration(
+                    color: AppColors.palm,
                     shape: BoxShape.circle,
                   ),
                   child: Text(
                     '${ayah['ayahNumber']}',
                     style: const TextStyle(
-                      color: Colors.white,
+                      color: AppColors.parchment,
                       fontWeight: FontWeight.bold,
                       fontSize: 12,
                     ),
                   ),
                 ),
-                const SizedBox(width: 8),
+                const SizedBox(width: AppSpacing.sm),
                 // Text takes less space
-                Expanded(
+                const Expanded(
                   child: Text(
-                    isCorrect ? 'Correct' : 'Needs Improvement',
+                    'Correct',
                     style: TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.bold,
-                      color: isCorrect ? Colors.green.shade800 : Colors.red.shade800,
+                      color: AppColors.palm,
                     ),
                   ),
                 ),
@@ -1577,53 +1470,52 @@ const SizedBox(height: 12),
                 if (hasScore)
                   Container(
                     padding: const EdgeInsets.symmetric(
-                      horizontal: 8, 
+                      horizontal: AppSpacing.sm,
                       vertical: 4,
                     ),
                     decoration: BoxDecoration(
-                      color: isCorrect ? Colors.green.shade100 : Colors.red.shade100,
+                      color: AppColors.card,
                       borderRadius: BorderRadius.circular(12),
-                      border: Border.all(
-                        color: isCorrect ? Colors.green : Colors.red,
-                        width: 0.5,
+                      border: const Border.fromBorderSide(
+                        BorderSide(color: AppColors.palm, width: 0.5),
                       ),
                     ),
                     child: Text(
                       '$score%',
-                      style: TextStyle(
+                      style: const TextStyle(
                         fontWeight: FontWeight.bold,
                         fontSize: 12,
-                        color: isCorrect ? Colors.green.shade800 : Colors.red.shade800,
+                        color: AppColors.palm,
                       ),
                     ),
                   ),
               ],
             ),
-            
+
             // Use an expandable section for the ayah text
             ExpansionTile(
-              tilePadding: EdgeInsets.symmetric(horizontal: 8, vertical: 0),
-              title: Text(
-                'View Ayah Text',
+              tilePadding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm, vertical: 0),
+              title: const Text(
+                'View ayah text',
                 style: TextStyle(
                   fontSize: 13,
                   fontWeight: FontWeight.w500,
-                  color: Colors.grey.shade700,
+                  color: AppColors.inkSoft,
                 ),
               ),
               children: [
                 Container(
-                  padding: const EdgeInsets.all(8),
+                  padding: const EdgeInsets.all(AppSpacing.sm),
                   decoration: BoxDecoration(
-                    color: Colors.white,
+                    color: AppColors.card,
                     borderRadius: BorderRadius.circular(4),
-                    border: Border.all(color: Colors.grey.shade200),
+                    border: Border.all(color: AppColors.line),
                   ),
                   child: Text(
                     ayah['displayText'] ?? ayah['text'],
                     style: const TextStyle(
                       fontSize: 16, // Smaller font size
-                      fontFamily: 'Scheherazade',
+                      fontFamily: 'Amiri Quran',
                     ),
                     textDirection: TextDirection.rtl,
                     textAlign: TextAlign.right,
@@ -1631,25 +1523,25 @@ const SizedBox(height: 12),
                 ),
               ],
             ),
-            
+
             // Your recitation display
             Container(
-              padding: const EdgeInsets.all(8),
-              margin: const EdgeInsets.only(top: 8),
+              padding: const EdgeInsets.all(AppSpacing.sm),
+              margin: const EdgeInsets.only(top: AppSpacing.sm),
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: AppColors.card,
                 borderRadius: BorderRadius.circular(4),
-                border: Border.all(color: isCorrect ? Colors.green.shade200 : Colors.red.shade200),
+                border: Border.all(color: AppColors.palm.withOpacity(0.4)),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
+                  const Text(
                     'Your recitation:',
                     style: TextStyle(
                       fontWeight: FontWeight.bold,
                       fontSize: 13,
-                      color: isCorrect ? Colors.green.shade800 : Colors.red.shade800,
+                      color: AppColors.palm,
                     ),
                   ),
                   const SizedBox(height: 4),
@@ -1906,15 +1798,15 @@ enum AyahStatus {
 Color _getStatusColor(AyahStatus status) {
   switch (status) {
     case AyahStatus.initial:
-      return Colors.grey;
+      return AppColors.inkSoft;
     case AyahStatus.recording:
-      return Colors.blue;
+      return AppColors.gold;
     case AyahStatus.processing:
-      return Colors.orange;
+      return AppColors.sage;
     case AyahStatus.correct:
-      return Colors.green;
+      return AppColors.palm;
     case AyahStatus.incorrect:
-      return Colors.red;
+      return AppColors.clay;
   }
 }
 
@@ -1923,7 +1815,7 @@ String _getStatusMessage(AyahStatus status) {
     case AyahStatus.initial:
       return 'Ready to start';
     case AyahStatus.recording:
-      return 'Recording... press "Next Ayah" when done';
+      return 'Recording... press "Next ayah" when done';
     case AyahStatus.processing:
       return 'Processing your recitation...';
     case AyahStatus.correct:
@@ -1936,21 +1828,21 @@ String _getStatusMessage(AyahStatus status) {
 Widget _buildStatusIndicator(AyahStatus status) {
   switch (status) {
     case AyahStatus.initial:
-      return Icon(Icons.circle_outlined, color: Colors.grey);
+      return const Icon(Icons.circle_outlined, color: AppColors.inkSoft);
     case AyahStatus.recording:
-      return Icon(Icons.mic, color: Colors.blue);
+      return const Icon(Icons.mic_rounded, color: AppColors.gold);
     case AyahStatus.processing:
-      return SizedBox(
+      return const SizedBox(
         width: 24,
         height: 24,
         child: CircularProgressIndicator(
           strokeWidth: 2,
-          valueColor: AlwaysStoppedAnimation<Color>(Colors.orange),
+          valueColor: AlwaysStoppedAnimation<Color>(AppColors.sage),
         ),
       );
     case AyahStatus.correct:
-      return Icon(Icons.check_circle, color: Colors.green);
+      return const Icon(Icons.check_circle_rounded, color: AppColors.palm);
     case AyahStatus.incorrect:
-      return Icon(Icons.error, color: Colors.red);
+      return const Icon(Icons.error_rounded, color: AppColors.clay);
   }
 }

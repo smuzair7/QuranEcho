@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../services/user_provider.dart';
 import '../services/surah_progress_service.dart';
+import '../theme/app_theme.dart';
 
 class SurahProgressPage extends StatefulWidget {
   const SurahProgressPage({super.key});
@@ -195,7 +196,6 @@ class _SurahProgressPageState extends State<SurahProgressPage> {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
               content: Text('Progress updated successfully'),
-              backgroundColor: Colors.green,
               duration: Duration(seconds: 2),
             ),
           );
@@ -223,40 +223,19 @@ class _SurahProgressPageState extends State<SurahProgressPage> {
     // Show loading indicator
     if (_isLoading) {
       return Scaffold(
-        appBar: AppBar(
-          title: const Text('Surah Progress'),
-          backgroundColor: const Color(0xFF00A896),
-          foregroundColor: Colors.white,
-          elevation: 0,
-        ),
-        body: Container(
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-              colors: [
-                Colors.black87,
-                const Color(0xFF121212),
-              ],
-            ),
-          ),
-          child: const Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                CircularProgressIndicator(
-                  color: Color(0xFF00A896),
-                ),
-                SizedBox(height: 16),
-                Text(
-                  'Loading your progress...',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 16,
-                  ),
-                ),
-              ],
-            ),
+        backgroundColor: AppColors.parchment,
+        appBar: AppBar(title: const Text('Surah Progress')),
+        body: const Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              CircularProgressIndicator(),
+              SizedBox(height: AppSpacing.md),
+              Text(
+                'Loading your progress...',
+                style: TextStyle(color: AppColors.inkSoft, fontSize: 16),
+              ),
+            ],
           ),
         ),
       );
@@ -265,61 +244,38 @@ class _SurahProgressPageState extends State<SurahProgressPage> {
     // Show error message
     if (_error.isNotEmpty) {
       return Scaffold(
-        appBar: AppBar(
-          title: const Text('Surah Progress'),
-          backgroundColor: const Color(0xFF00A896),
-          foregroundColor: Colors.white,
-          elevation: 0,
-        ),
-        body: Container(
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-              colors: [
-                Colors.black87,
-                const Color(0xFF121212),
-              ],
-            ),
-          ),
-          child: Center(
+        backgroundColor: AppColors.parchment,
+        appBar: AppBar(title: const Text('Surah Progress')),
+        body: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(AppSpacing.lg),
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 const Icon(
-                  Icons.error_outline,
-                  size: 80,
-                  color: Colors.red,
+                  Icons.error_outline_rounded,
+                  size: 56,
+                  color: AppColors.clay,
                 ),
-                const SizedBox(height: 20),
-                const Text(
+                const SizedBox(height: AppSpacing.md),
+                Text(
                   'Failed to load progress',
-                  style: TextStyle(
-                    fontSize: 18,
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                  ),
+                  style: Theme.of(context).textTheme.titleLarge,
                 ),
-                const SizedBox(height: 10),
+                const SizedBox(height: AppSpacing.xs),
                 Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 30),
+                  padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
                   child: Text(
                     _error,
                     textAlign: TextAlign.center,
-                    style: const TextStyle(
-                      color: Colors.white70,
-                    ),
+                    style: const TextStyle(color: AppColors.inkSoft),
                   ),
                 ),
-                const SizedBox(height: 30),
+                const SizedBox(height: AppSpacing.lg),
                 ElevatedButton.icon(
                   onPressed: _loadSurahProgress,
-                  icon: const Icon(Icons.refresh),
-                  label: const Text('Try Again'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF00A896),
-                    foregroundColor: Colors.white,
-                  ),
+                  icon: const Icon(Icons.refresh_rounded),
+                  label: const Text('Try again'),
                 ),
               ],
             ),
@@ -327,21 +283,19 @@ class _SurahProgressPageState extends State<SurahProgressPage> {
         ),
       );
     }
-    
+
     // Calculate progress statistics
     final completedSurahs = _getCompletedSurahs();
     final partiallySurahs = _getPartiallySurahs();
     final notStartedCount = 114 - completedSurahs.length - partiallySurahs.length;
 
     return Scaffold(
+      backgroundColor: AppColors.parchment,
       appBar: AppBar(
         title: const Text('Surah Progress'),
-        backgroundColor: const Color(0xFF00A896),
-        foregroundColor: Colors.white,
-        elevation: 0,
         actions: [
           IconButton(
-            icon: const Icon(Icons.refresh),
+            icon: const Icon(Icons.refresh_rounded),
             onPressed: () {
               print('Manual refresh triggered');
               _loadSurahProgress();
@@ -350,150 +304,134 @@ class _SurahProgressPageState extends State<SurahProgressPage> {
           ),
         ],
       ),
-      body: Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [
-              Colors.black87,
-              const Color(0xFF121212),
-            ],
-          ),
-        ),
-        child: Column(
-          children: [
-            // Progress Summary
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(20),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                children: [
-                  _buildSummaryCard(
-                    'Completed',
-                    completedSurahs.length.toString(),
-                    const Color(0xFF00A896),
-                    Icons.check_circle,
-                  ),
-                  _buildSummaryCard(
-                    'In Progress',
-                    partiallySurahs.length.toString(),
-                    Colors.orange,
-                    Icons.hourglass_empty,
-                  ),
-                  _buildSummaryCard(
-                    'Not Started',
-                    notStartedCount.toString(),
-                    Colors.grey,
-                    Icons.circle_outlined,
-                  ),
-                ],
+      body: Column(
+        children: [
+          // Progress Summary
+          Padding(
+            padding: const EdgeInsets.fromLTRB(
+              AppSpacing.lg, AppSpacing.lg, AppSpacing.lg, AppSpacing.md,
+            ),
+            child: Card(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
+                child: Row(
+                  children: [
+                    _buildSummaryCard(
+                      'Completed',
+                      completedSurahs.length.toString(),
+                      AppColors.palm,
+                      Icons.check_circle_rounded,
+                    ),
+                    _buildSummaryCard(
+                      'In progress',
+                      partiallySurahs.length.toString(),
+                      AppColors.sage,
+                      Icons.hourglass_bottom_rounded,
+                    ),
+                    _buildSummaryCard(
+                      'Not started',
+                      notStartedCount.toString(),
+                      AppColors.inkSoft,
+                      Icons.circle_outlined,
+                    ),
+                  ],
+                ),
               ),
             ),
-            
-            // Progress info text
-            if (_surahProgress.isEmpty)
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-                child: Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: Colors.blue.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: Colors.blue.withOpacity(0.3)),
-                  ),
-                  child: Row(
-                    children: [
-                      Icon(
-                        Icons.info_outline,
-                        color: Colors.blue,
-                        size: 24,
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Text(
-                          'Start memorizing ayats to track your surah progress here!',
-                          style: TextStyle(
-                            color: Colors.blue[200],
-                            fontSize: 14,
-                          ),
+          ),
+
+          // Progress info text
+          if (_surahProgress.isEmpty)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(
+                AppSpacing.lg, 0, AppSpacing.lg, AppSpacing.md,
+              ),
+              child: Container(
+                padding: const EdgeInsets.all(AppSpacing.md),
+                decoration: BoxDecoration(
+                  color: AppColors.palmSoft,
+                  borderRadius: AppRadius.mdBorder,
+                ),
+                child: Row(
+                  children: [
+                    const Icon(
+                      Icons.info_outline_rounded,
+                      color: AppColors.palm,
+                      size: 22,
+                    ),
+                    const SizedBox(width: AppSpacing.sm),
+                    const Expanded(
+                      child: Text(
+                        'Start memorizing ayats to track your surah progress here!',
+                        style: TextStyle(
+                          color: AppColors.palmDeep,
+                          fontSize: 14,
                         ),
                       ),
-                    ],
-                  ),
-                ),
-              ),
-            
-            // Surah List
-            Expanded(
-              child: RefreshIndicator(
-                onRefresh: () async {
-                  print('Pull to refresh triggered');
-                  _loadSurahProgress();
-                },
-                color: const Color(0xFF00A896),
-                child: ListView.builder(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  itemCount: _surahs.length,
-                  itemBuilder: (context, index) {
-                    final surah = _surahs[index];
-                    final surahNumber = surah['number'] as int;
-                    final memorizedAyats = _surahProgress[surahNumber] ?? 0;
-                    final totalAyats = surah['totalAyats'] as int;
-                    
-                    final isCompleted = memorizedAyats >= totalAyats;
-                    final isPartial = memorizedAyats > 0 && memorizedAyats < totalAyats;
-                    
-                    return _buildSurahCard(
-                      surah: surah,
-                      isCompleted: isCompleted,
-                      isPartial: isPartial,
-                      memorizedAyats: memorizedAyats,
-                    );
-                  },
+                    ),
+                  ],
                 ),
               ),
             ),
-          ],
-        ),
+
+          // Surah List
+          Expanded(
+            child: RefreshIndicator(
+              onRefresh: () async {
+                print('Pull to refresh triggered');
+                _loadSurahProgress();
+              },
+              child: ListView.builder(
+                padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+                itemCount: _surahs.length,
+                itemBuilder: (context, index) {
+                  final surah = _surahs[index];
+                  final surahNumber = surah['number'] as int;
+                  final memorizedAyats = _surahProgress[surahNumber] ?? 0;
+                  final totalAyats = surah['totalAyats'] as int;
+
+                  final isCompleted = memorizedAyats >= totalAyats;
+                  final isPartial = memorizedAyats > 0 && memorizedAyats < totalAyats;
+
+                  return _buildSurahCard(
+                    surah: surah,
+                    isCompleted: isCompleted,
+                    isPartial: isPartial,
+                    memorizedAyats: memorizedAyats,
+                  );
+                },
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
 
   Widget _buildSummaryCard(String title, String value, Color color, IconData icon) {
-    return Column(
-      children: [
-        Container(
-          width: 60,
-          height: 60,
-          decoration: BoxDecoration(
-            color: color.withOpacity(0.2),
-            borderRadius: BorderRadius.circular(30),
+    return Expanded(
+      child: Column(
+        children: [
+          Container(
+            width: 52,
+            height: 52,
+            decoration: BoxDecoration(
+              color: color.withOpacity(0.14),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(icon, color: color, size: 24),
           ),
-          child: Icon(
-            icon,
-            color: color,
-            size: 30,
+          const SizedBox(height: AppSpacing.sm),
+          Text(
+            value,
+            style: Theme.of(context).textTheme.titleLarge,
           ),
-        ),
-        const SizedBox(height: 8),
-        Text(
-          value,
-          style: const TextStyle(
-            fontSize: 24,
-            fontWeight: FontWeight.bold,
-            color: Colors.white,
+          Text(
+            title,
+            style: const TextStyle(fontSize: 12, color: AppColors.inkSoft),
           ),
-        ),
-        Text(
-          title,
-          style: TextStyle(
-            fontSize: 12,
-            color: Colors.grey[400],
-          ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 
@@ -506,45 +444,40 @@ class _SurahProgressPageState extends State<SurahProgressPage> {
     Color statusColor;
     IconData statusIcon;
     String statusText;
-    
+
     if (isCompleted) {
-      statusColor = const Color(0xFF00A896);
-      statusIcon = Icons.check_circle;
+      statusColor = AppColors.palm;
+      statusIcon = Icons.check_circle_rounded;
       statusText = 'Completed';
     } else if (isPartial) {
-      statusColor = Colors.orange;
-      statusIcon = Icons.hourglass_empty;
-      statusText = 'In Progress';
+      statusColor = AppColors.sage;
+      statusIcon = Icons.hourglass_bottom_rounded;
+      statusText = 'In progress';
     } else {
-      statusColor = Colors.grey;
+      statusColor = AppColors.inkSoft;
       statusIcon = Icons.circle_outlined;
-      statusText = 'Not Started';
+      statusText = 'Not started';
     }
 
     final totalAyats = surah['totalAyats'] as int;
     final progressPercentage = totalAyats > 0 ? (memorizedAyats / totalAyats) : 0.0;
 
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
+    return Padding(
+      padding: const EdgeInsets.only(bottom: AppSpacing.sm),
       child: Card(
-        elevation: 2,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
-        ),
-        color: const Color(0xFF1E1E1E),
         child: Padding(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.all(AppSpacing.md),
           child: Column(
             children: [
               Row(
                 children: [
                   // Surah Number
                   Container(
-                    width: 40,
-                    height: 40,
+                    width: 44,
+                    height: 44,
                     decoration: BoxDecoration(
-                      color: statusColor.withOpacity(0.2),
-                      borderRadius: BorderRadius.circular(8),
+                      color: statusColor.withOpacity(0.14),
+                      shape: BoxShape.circle,
                     ),
                     child: Center(
                       child: Text(
@@ -552,80 +485,66 @@ class _SurahProgressPageState extends State<SurahProgressPage> {
                         style: TextStyle(
                           color: statusColor,
                           fontWeight: FontWeight.bold,
-                          fontSize: 16,
+                          fontSize: 15,
                         ),
                       ),
                     ),
                   ),
-                  
-                  const SizedBox(width: 16),
-                  
+
+                  const SizedBox(width: AppSpacing.md),
+
                   // Surah Info
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
+                        Text(surah['name'], style: Theme.of(context).textTheme.titleMedium),
+                        const SizedBox(height: 2),
                         Text(
-                          surah['name'],
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          '$memorizedAyats/${surah['totalAyats']} Ayats',
-                          style: TextStyle(
-                            color: Colors.grey[400],
-                            fontSize: 14,
-                          ),
+                          '$memorizedAyats/${surah['totalAyats']} ayats',
+                          style: const TextStyle(color: AppColors.inkSoft, fontSize: 13),
                         ),
                       ],
                     ),
                   ),
-                  
+
                   // Status
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.end,
                     children: [
-                      Icon(
-                        statusIcon,
-                        color: statusColor,
-                        size: 24,
-                      ),
+                      Icon(statusIcon, color: statusColor, size: 22),
                       const SizedBox(height: 4),
                       Text(
                         statusText,
                         style: TextStyle(
                           color: statusColor,
                           fontSize: 12,
-                          fontWeight: FontWeight.w500,
+                          fontWeight: FontWeight.w600,
                         ),
                       ),
                     ],
                   ),
                 ],
               ),
-              
+
               // Progress Bar (only show if partially completed)
               if (isPartial) ...[
-                const SizedBox(height: 12),
+                const SizedBox(height: AppSpacing.sm),
                 ClipRRect(
                   borderRadius: BorderRadius.circular(4),
                   child: LinearProgressIndicator(
                     value: progressPercentage,
-                    backgroundColor: Colors.grey[800],
+                    backgroundColor: AppColors.line,
                     valueColor: AlwaysStoppedAnimation<Color>(statusColor),
                     minHeight: 6,
                   ),
                 ),
                 const SizedBox(height: 4),
-                Text(
-                  '${(progressPercentage * 100).toInt()}% Complete',
-                  style: TextStyle(
-                    color: Colors.grey[400],
-                    fontSize: 12,
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: Text(
+                    '${(progressPercentage * 100).toInt()}% complete',
+                    style: const TextStyle(color: AppColors.inkSoft, fontSize: 12),
                   ),
                 ),
               ],

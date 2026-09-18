@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:QuranEcho/pages/recite_page.dart';
+import '../theme/app_theme.dart';
 
 class ReciteSelectQariPage extends StatefulWidget {
   const ReciteSelectQariPage({super.key});
@@ -53,175 +54,103 @@ class _ReciteSelectQariPageState extends State<ReciteSelectQariPage> {
 
   @override
   Widget build(BuildContext context) {
+    final textTheme = Theme.of(context).textTheme;
+
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Lehja Learning'),
-        backgroundColor: const Color(0xFF00A896), // Updated to match Hifz page
-        foregroundColor: Colors.white,
-        elevation: 0,
-      ),
-      // Add dark gradient background to match other pages
-      body: Container(
-        width: double.infinity,
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [
-              Colors.black87,
-              const Color(0xFF121212), // Very dark gray
+      backgroundColor: AppColors.parchment,
+      appBar: AppBar(title: const Text('Lehja Learning')),
+      body: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(AppSpacing.lg),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Center(
+                child: Container(
+                  width: 72,
+                  height: 72,
+                  decoration: const BoxDecoration(
+                    color: AppColors.palmSoft,
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(
+                    Icons.record_voice_over,
+                    size: 36,
+                    color: AppColors.palm,
+                  ),
+                ),
+              ),
+              const SizedBox(height: AppSpacing.md),
+              Text(
+                'Learn Quranic recitation style',
+                style: textTheme.headlineSmall,
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: AppSpacing.sm),
+              Text(
+                'Select a Qari (reciter) and surah to learn their recitation style',
+                textAlign: TextAlign.center,
+                style: textTheme.bodyMedium?.copyWith(color: AppColors.inkSoft),
+              ),
+              const SizedBox(height: AppSpacing.xl),
+
+              // Reciter dropdown
+              DropdownButtonFormField<String>(
+                value: _selectedReciter,
+                isExpanded: true,
+                decoration: const InputDecoration(
+                  labelText: 'Reciter',
+                  prefixIcon: Icon(Icons.person_outline),
+                ),
+                hint: const Text('Choose a reciter'),
+                items: _reciters.map((String value) {
+                  return DropdownMenuItem<String>(
+                    value: value,
+                    child: Text(value),
+                  );
+                }).toList(),
+                onChanged: (newValue) {
+                  setState(() {
+                    _selectedReciter = newValue;
+                  });
+                },
+              ),
+
+              const SizedBox(height: AppSpacing.md),
+
+              // Surah dropdown
+              DropdownButtonFormField<String>(
+                value: _selectedSurah,
+                isExpanded: true,
+                decoration: const InputDecoration(
+                  labelText: 'Surah',
+                  prefixIcon: Icon(Icons.menu_book_outlined),
+                ),
+                hint: const Text('Choose a surah'),
+                items: _surahs.map((String value) {
+                  return DropdownMenuItem<String>(
+                    value: value,
+                    child: Text(value),
+                  );
+                }).toList(),
+                onChanged: (newValue) {
+                  setState(() {
+                    _selectedSurah = newValue;
+                  });
+                },
+              ),
+
+              const Spacer(),
+
+              ElevatedButton.icon(
+                onPressed: (_selectedReciter != null && _selectedSurah != null)
+                    ? _proceedToRecitation
+                    : null,
+                icon: const Icon(Icons.headphones),
+                label: const Text('Start learning'),
+              ),
             ],
           ),
-        ),
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Icon(
-              Icons.record_voice_over,
-              size: 70,
-              color:
-                  const Color(0xFF00A896), // Updated to match Hifz page color
-            ),
-            const SizedBox(height: 20),
-            const Text(
-              'Learn Quranic Recitation Style',
-              style: TextStyle(
-                fontSize: 28,
-                fontWeight: FontWeight.bold,
-                color: Colors.white, // Updated for dark theme
-              ),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 16),
-            const Text(
-              'Select a Qari (reciter) and Surah to learn their recitation style',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 16,
-                color: Colors.white70, // Updated for dark theme
-              ),
-            ),
-            const SizedBox(height: 40),
-
-            // Reciter dropdown
-            const Text(
-              'Select Reciter',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.w500,
-                color: Colors.white, // Updated for dark theme
-              ),
-            ),
-            const SizedBox(height: 8),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-              decoration: BoxDecoration(
-                color: Colors.white.withOpacity(
-                    0.9), // White background for better readability
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(
-                  color: const Color(0xFF00A896), // Updated border color
-                ),
-              ),
-              child: DropdownButtonHideUnderline(
-                child: DropdownButton<String>(
-                  isExpanded: true,
-                  hint: const Text('Choose a reciter',
-                      style: TextStyle(color: Colors.black87)),
-                  value: _selectedReciter,
-                  dropdownColor:
-                      Colors.white, // Ensure dropdown menu has white background
-                  style: const TextStyle(
-                      color: Colors.black87,
-                      fontSize: 16), // Text color for selected item
-                  items: _reciters.map((String value) {
-                    return DropdownMenuItem<String>(
-                      value: value,
-                      child: Text(value),
-                    );
-                  }).toList(),
-                  onChanged: (newValue) {
-                    setState(() {
-                      _selectedReciter = newValue;
-                    });
-                  },
-                ),
-              ),
-            ),
-
-            const SizedBox(height: 24),
-
-            // Surah dropdown
-            const Text(
-              'Select Surah',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.w500,
-                color: Colors.white, // Updated for dark theme
-              ),
-            ),
-            const SizedBox(height: 8),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-              decoration: BoxDecoration(
-                color: Colors.white.withOpacity(
-                    0.9), // White background for better readability
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(
-                  color: const Color(0xFF00A896), // Updated border color
-                ),
-              ),
-              child: DropdownButtonHideUnderline(
-                child: DropdownButton<String>(
-                  isExpanded: true,
-                  hint: const Text('Choose a surah',
-                      style: TextStyle(color: Colors.black87)),
-                  value: _selectedSurah,
-                  dropdownColor:
-                      Colors.white, // Ensure dropdown menu has white background
-                  style: const TextStyle(
-                      color: Colors.black87,
-                      fontSize: 16), // Text color for selected item
-                  items: _surahs.map((String value) {
-                    return DropdownMenuItem<String>(
-                      value: value,
-                      child: Text(value),
-                    );
-                  }).toList(),
-                  onChanged: (newValue) {
-                    setState(() {
-                      _selectedSurah = newValue;
-                    });
-                  },
-                ),
-              ),
-            ),
-
-            const Spacer(),
-
-            ElevatedButton.icon(
-              onPressed: (_selectedReciter != null && _selectedSurah != null)
-                  ? _proceedToRecitation
-                  : null,
-              style: ElevatedButton.styleFrom(
-                backgroundColor:
-                    const Color(0xFF00A896), // Updated to match Hifz page
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                disabledBackgroundColor: Colors
-                    .grey.shade700, // Darker disabled color for dark theme
-              ),
-              icon: const Icon(Icons.headphones),
-              label: const Text(
-                'Start Learning',
-                style: TextStyle(fontSize: 18),
-              ),
-            ),
-          ],
         ),
       ),
     );

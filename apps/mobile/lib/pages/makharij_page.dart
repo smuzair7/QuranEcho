@@ -10,6 +10,7 @@ import 'package:path/path.dart' as path;
 import 'package:http/http.dart' as http;
 import 'dart:math' as math;
 import 'package:QuranEcho/config/app_config.dart';
+import '../theme/app_theme.dart';
 
 // Add this class at the top level (not inside any other class)
 class TarteelVerificationResult {
@@ -648,7 +649,7 @@ Future<TarteelVerificationResult> _verifyWithTarteelAPI() async {
           children: [
             const Icon(
               Icons.signal_wifi_connected_no_internet_4_outlined,
-              color: Colors.red,
+              color: AppColors.clay,
               size: 50,
             ),
             const SizedBox(height: 16),
@@ -661,7 +662,7 @@ Future<TarteelVerificationResult> _verifyWithTarteelAPI() async {
               '• Make sure the Flask server is running\n'
               '• Check your network connection\n'
               '• Verify the server address in the app',
-              style: TextStyle(color: Colors.grey[700]),
+              style: TextStyle(color: AppColors.inkSoft),
             ),
           ],
         ),
@@ -679,19 +680,19 @@ Future<TarteelVerificationResult> _verifyWithTarteelAPI() async {
   Color _getAssessmentColor(String assessment) {
     switch (assessment) {
       case 'Perfect':
-        return Colors.green;
+        return AppColors.palm;
       case 'Excellent':
-        return Colors.lightGreen;
+        return AppColors.palm;
       case 'Good':
-        return Colors.amber;
+        return AppColors.gold;
       case 'Needs Improvement':
-        return Colors.orange;
+        return AppColors.gold;
       case 'Poor':
-        return Colors.redAccent;
+        return AppColors.clay;
       case 'Incorrect':
-        return Colors.red;
+        return AppColors.clay;
       default:
-        return Colors.grey;
+        return AppColors.inkSoft;
     }
   }
 
@@ -712,21 +713,14 @@ Widget _buildCollapsibleGuide() {
   return Container(
     width: double.infinity,
     decoration: BoxDecoration(
-      color: Colors.white,
-      borderRadius: BorderRadius.circular(12),
-      border: Border.all(color: const Color(0xFF1F8A70).withOpacity(0.3)),
-      boxShadow: [
-        BoxShadow(
-          color: Colors.black.withOpacity(0.05),
-          blurRadius: 4,
-          offset: const Offset(0, 2),
-        ),
-      ],
+      color: AppColors.card,
+      borderRadius: AppRadius.mdBorder,
+      border: Border.all(color: AppColors.line),
     ),
     child: Material(
       color: Colors.transparent,
       child: InkWell(
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: AppRadius.mdBorder,
         onTap: () {
           setState(() {
             _isPronunciationGuideExpanded = !_isPronunciationGuideExpanded;
@@ -741,7 +735,7 @@ Widget _buildCollapsibleGuide() {
                 children: [
                   Icon(
                     Icons.speaker_notes,
-                    color: const Color(0xFF1F8A70),
+                    color: AppColors.palm,
                     size: 22,
                   ),
                   const SizedBox(width: 8),
@@ -750,7 +744,7 @@ Widget _buildCollapsibleGuide() {
                     style: TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.bold,
-                      color: const Color(0xFF1F8A70),
+                      color: AppColors.palm,
                     ),
                   ),
                   const Spacer(),
@@ -758,7 +752,7 @@ Widget _buildCollapsibleGuide() {
                     _isPronunciationGuideExpanded 
                         ? Icons.keyboard_arrow_up 
                         : Icons.keyboard_arrow_down,
-                    color: const Color(0xFF1F8A70),
+                    color: AppColors.palm,
                   ),
                 ],
               ),
@@ -787,15 +781,9 @@ Widget _buildCollapsibleGuide() {
       width: double.infinity,
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.1),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
+        color: AppColors.card,
+        borderRadius: AppRadius.mdBorder,
+        border: Border.all(color: AppColors.line),
       ),
       child: Column(
         children: [
@@ -813,7 +801,7 @@ Widget _buildCollapsibleGuide() {
           if (_analysisResult!.containsKey('error')) ...[
             const Icon(
               Icons.error_outline,
-              color: Colors.red,
+              color: AppColors.clay,
               size: 48,
             ),
             const SizedBox(height: 8),
@@ -821,7 +809,7 @@ Widget _buildCollapsibleGuide() {
               _analysisResult!['error'],
               textAlign: TextAlign.center,
               style: const TextStyle(
-                color: Colors.red,
+                color: AppColors.clay,
                 fontSize: 16,
                 fontWeight: FontWeight.w500,
               ),
@@ -832,7 +820,7 @@ Widget _buildCollapsibleGuide() {
               _analysisResult!['is_mismatch'] == true) ...[
             const Icon(
               Icons.error_outline,
-              color: Colors.red,
+              color: AppColors.clay,
               size: 48,
             ),
             const SizedBox(height: 12),
@@ -841,14 +829,14 @@ Widget _buildCollapsibleGuide() {
               style: const TextStyle(
                 fontSize: 24,
                 fontWeight: FontWeight.bold,
-                color: Colors.red,
+                color: AppColors.clay,
               ),
             ),
             const SizedBox(height: 16),
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: Colors.red.withOpacity(0.1),
+                color: AppColors.clay.withOpacity(0.1),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Column(
@@ -862,7 +850,7 @@ Widget _buildCollapsibleGuide() {
                             'Expected',
                             style: TextStyle(
                               fontSize: 14,
-                              color: Colors.grey[700],
+                              color: AppColors.inkSoft,
                             ),
                           ),
                           const SizedBox(height: 8),
@@ -870,7 +858,7 @@ Widget _buildCollapsibleGuide() {
                             width: 60,
                             height: 60,
                             decoration: BoxDecoration(
-                              color: const Color(0xFF1F8A70).withOpacity(0.2),
+                              color: AppColors.palm.withOpacity(0.2),
                               shape: BoxShape.circle,
                             ),
                             child: Center(
@@ -879,7 +867,7 @@ Widget _buildCollapsibleGuide() {
                                 style: const TextStyle(
                                   fontSize: 40,
                                   fontWeight: FontWeight.bold,
-                                  fontFamily: 'Scheherazade',
+                                  fontFamily: 'Amiri Quran',
                                 ),
                               ),
                             ),
@@ -892,7 +880,7 @@ Widget _buildCollapsibleGuide() {
                         const SizedBox(width: 40),
                         const Icon(
                           Icons.arrow_forward,
-                          color: Colors.red,
+                          color: AppColors.clay,
                         ),
                         const SizedBox(width: 40),
                         Column(
@@ -901,7 +889,7 @@ Widget _buildCollapsibleGuide() {
                               'Detected',
                               style: TextStyle(
                                 fontSize: 14,
-                                color: Colors.grey[700],
+                                color: AppColors.inkSoft,
                               ),
                             ),
                             const SizedBox(height: 8),
@@ -909,7 +897,7 @@ Widget _buildCollapsibleGuide() {
                               width: 60,
                               height: 60,
                               decoration: BoxDecoration(
-                                color: Colors.red.withOpacity(0.2),
+                                color: AppColors.clay.withOpacity(0.2),
                                 shape: BoxShape.circle,
                               ),
                               child: Center(
@@ -926,7 +914,7 @@ Widget _buildCollapsibleGuide() {
                                   style: const TextStyle(
                                     fontSize: 40,
                                     fontWeight: FontWeight.bold,
-                                    fontFamily: 'Scheherazade',
+                                    fontFamily: 'Amiri Quran',
                                   ),
                                 ),
                               ),
@@ -952,8 +940,8 @@ Widget _buildCollapsibleGuide() {
                       _recordingStatus = 'Ready to record again';
                     }),
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF1F8A70),
-                      foregroundColor: Colors.white,
+                      backgroundColor: AppColors.palm,
+                      foregroundColor: AppColors.parchment,
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(30),
                       ),
@@ -1008,7 +996,7 @@ Widget _buildCollapsibleGuide() {
                   child: LinearProgressIndicator(
                     value: _analysisResult!['confidence'] / 100,
                     minHeight: 10,
-                    backgroundColor: Colors.grey[300],
+                    backgroundColor: AppColors.line,
                     valueColor: AlwaysStoppedAnimation<Color>(
                       _getAssessmentColor(_analysisResult!['assessment']),
                     ),
@@ -1173,8 +1161,8 @@ Widget _buildCollapsibleGuide() {
       height: 80,
       width: double.infinity,
       decoration: BoxDecoration(
-        color: Colors.black.withOpacity(0.05),
-        borderRadius: BorderRadius.circular(20),
+        color: AppColors.palmSoft.withOpacity(0.5),
+        borderRadius: AppRadius.lgBorder,
       ),
       padding: const EdgeInsets.all(10),
       child: Row(
@@ -1187,10 +1175,10 @@ Widget _buildCollapsibleGuide() {
             height: _audioLevels[index] * 60,
             decoration: BoxDecoration(
               color: _isRecording
-                  ? Colors.red.withOpacity(0.7)
+                  ? AppColors.clay.withOpacity(0.7)
                   : _isPlayingReference
-                      ? Colors.orange.withOpacity(0.7)
-                      : Colors.green.withOpacity(0.7),
+                      ? AppColors.gold.withOpacity(0.7)
+                      : AppColors.palm.withOpacity(0.7),
               borderRadius: BorderRadius.circular(5),
             ),
           ),
@@ -1222,14 +1210,14 @@ Widget _buildCollapsibleGuide() {
                       child: Container(
                         width: 120,
                         height: 120,
-                        decoration: const BoxDecoration(color: Color(0xFF1F8A70), shape: BoxShape.circle),
-                        child: const Icon(Icons.check, color: Colors.white, size: 80),
+                        decoration: const BoxDecoration(color: AppColors.palm, shape: BoxShape.circle),
+                        child: const Icon(Icons.check, color: AppColors.parchment, size: 80),
                       ),
                     ),
                     const SizedBox(height: 20),
                     Opacity(
                       opacity: value,
-                      child: const Text('Excellent!', style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: Colors.white)),
+                      child: const Text('Excellent!', style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: AppColors.parchment)),
                     ),
                   ],
                 );
@@ -1254,29 +1242,14 @@ Widget _buildCollapsibleGuide() {
       width: double.infinity,
       height: 70,
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: _isPlayingReference
-              ? [Colors.orange.shade400, Colors.orange.shade700]
-              : [const Color(0xFF00A896), const Color(0xFF1F8A70)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: _isPlayingReference
-                ? Colors.orange.withOpacity(0.4)
-                : const Color(0xFF1F8A70).withOpacity(0.4),
-            blurRadius: 8,
-            offset: const Offset(0, 4),
-          ),
-        ],
+        color: _isPlayingReference ? AppColors.gold : AppColors.palm,
+        borderRadius: AppRadius.mdBorder,
       ),
       child: Material(
         color: Colors.transparent,
         child: InkWell(
           onTap: _isRecording || _isProcessing ? null : _playReferenceAudio,
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: AppRadius.mdBorder,
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 20),
             child: Row(
@@ -1284,7 +1257,7 @@ Widget _buildCollapsibleGuide() {
               children: [
                 Icon(
                   _isPlayingReference ? Icons.stop_circle : Icons.play_circle_fill,
-                  color: Colors.white,
+                  color: AppColors.parchment,
                   size: 32,
                 ),
                 const SizedBox(width: 16),
@@ -1294,9 +1267,9 @@ Widget _buildCollapsibleGuide() {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        _isPlayingReference ? 'Stop Audio' : 'Listen to Pronunciation',
+                        _isPlayingReference ? 'Stop audio' : 'Listen to pronunciation',
                         style: const TextStyle(
-                          color: Colors.white,
+                          color: AppColors.parchment,
                           fontWeight: FontWeight.bold,
                           fontSize: 16,
                         ),
@@ -1304,7 +1277,7 @@ Widget _buildCollapsibleGuide() {
                       Text(
                         _isPlayingReference ? 'Playing...' : 'Tap to hear correct pronunciation',
                         style: TextStyle(
-                          color: Colors.white.withOpacity(0.8),
+                          color: AppColors.parchment.withOpacity(0.8),
                           fontSize: 12,
                         ),
                       ),
@@ -1316,7 +1289,7 @@ Widget _buildCollapsibleGuide() {
                     width: 40,
                     height: 40,
                     decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.2),
+                      color: AppColors.parchment.withOpacity(0.2),
                       shape: BoxShape.circle,
                     ),
                     child: Center(
@@ -1325,7 +1298,7 @@ Widget _buildCollapsibleGuide() {
                         height: 24,
                         child: CircularProgressIndicator(
                           strokeWidth: 2,
-                          valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                          valueColor: AlwaysStoppedAnimation<Color>(AppColors.parchment),
                         ),
                       ),
                     ),
@@ -1343,12 +1316,13 @@ Widget _buildCollapsibleGuide() {
 @override
 Widget build(BuildContext context) {
   return Scaffold(
+    backgroundColor: AppColors.parchment,
     appBar: AppBar(
       title: Text(widget.letter != null
           ? 'Pronunciation: ${widget.letter}'
           : 'Pronunciation Practice'),
-      backgroundColor: const Color(0xFF1F8A70),
-      foregroundColor: Colors.white,
+      backgroundColor: AppColors.palm,
+      foregroundColor: AppColors.parchment,
       elevation: 0,
     ),
     body: SafeArea(
@@ -1373,10 +1347,10 @@ Widget build(BuildContext context) {
             Container(
               padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 20), // Increased padding
               decoration: BoxDecoration(
-                color: Colors.grey.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(16), // Larger radius
+                color: AppColors.card,
+                borderRadius: AppRadius.mdBorder, // Larger radius
                 border: Border.all(
-                  color: Colors.grey.withOpacity(0.2),
+                  color: AppColors.line,
                 ),
               ),
               child: Text(
@@ -1385,7 +1359,7 @@ Widget build(BuildContext context) {
                 style: TextStyle(
                   fontSize: 16, // Larger text
                   fontWeight: _isRecording ? FontWeight.bold : FontWeight.normal,
-                  color: _isRecording ? Colors.red : Colors.grey[800],
+                  color: _isRecording ? AppColors.clay : AppColors.inkSoft,
                 ),
               ),
             ),
@@ -1421,19 +1395,12 @@ Widget _buildMainLetterDisplay() {
         width: 200,
         height: 200,
         decoration: BoxDecoration(
-          color: const Color(0xFF1F8A70).withOpacity(0.1),
+          color: AppColors.palmSoft,
           shape: BoxShape.circle,
           border: Border.all(
-            color: const Color(0xFF1F8A70).withOpacity(0.3),
-            width: 3,
+            color: AppColors.line,
+            width: 2,
           ),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.08),
-              blurRadius: 15,
-              offset: const Offset(0, 6),
-            ),
-          ],
         ),
         // Use just Center widget instead of nested Padding
         child: Center(
@@ -1442,7 +1409,8 @@ Widget _buildMainLetterDisplay() {
             style: const TextStyle(
               fontSize: 120,
               fontWeight: FontWeight.bold,
-              fontFamily: 'Scheherazade',
+              fontFamily: 'Amiri Quran',
+              color: AppColors.palmDeep,
               height: 1.2, // Slightly adjust line height
               // Remove any textAlign property that might be causing issues
             ),
@@ -1450,7 +1418,7 @@ Widget _buildMainLetterDisplay() {
           ),
         ),
       ),
-      
+
       // Sound button positioned at top-right (keep this part unchanged)
       Positioned(
         top: 5,
@@ -1459,15 +1427,8 @@ Widget _buildMainLetterDisplay() {
           width: 65,
           height: 65,
           decoration: BoxDecoration(
-            color: _isPlayingReference ? Colors.orange : const Color(0xFF00A896),
+            color: _isPlayingReference ? AppColors.gold : AppColors.palm,
             shape: BoxShape.circle,
-            boxShadow: [
-              BoxShadow(
-                color: (_isPlayingReference ? Colors.orange : const Color(0xFF00A896)).withOpacity(0.5),
-                blurRadius: 10,
-                offset: const Offset(0, 4),
-              ),
-            ],
           ),
           child: Material(
             color: Colors.transparent,
@@ -1477,7 +1438,7 @@ Widget _buildMainLetterDisplay() {
               child: Center(
                 child: Icon(
                   _isPlayingReference ? Icons.stop : Icons.volume_up,
-                  color: Colors.white,
+                  color: AppColors.parchment,
                   size: 34,
                 ),
               ),
@@ -1499,7 +1460,7 @@ Widget _buildRecordingControls() {
         onPressed: _isPlaying || _isProcessing
             ? null
             : (_isRecording ? _stopRecording : _checkPermissionAndStartRecording),
-        color: _isRecording ? Colors.red : const Color(0xFF1F8A70),
+        color: _isRecording ? AppColors.clay : AppColors.palm,
         icon: _isRecording ? Icons.stop : Icons.mic,
         label: _isRecording ? 'Stop' : 'Record',
         size: 85,  // Increased size
@@ -1512,7 +1473,7 @@ Widget _buildRecordingControls() {
                 !_isProcessing)
             ? (_isPlaying ? _stopPlayback : _playRecording)
             : null,
-        color: _isPlaying ? Colors.orange : const Color(0xFF00A896),
+        color: _isPlaying ? AppColors.gold : AppColors.palm,
         icon: _isPlaying ? Icons.stop : Icons.play_arrow,
         label: _isPlaying ? 'Stop' : 'Play',
         size: 85,  // Increased size
@@ -1526,7 +1487,7 @@ Widget _buildRecordingControls() {
                 !_isProcessing)
             ? _analyzeRecording
             : null,
-        color: const Color(0xFF3778FF),
+        color: AppColors.palmDeep,
         icon: Icons.analytics_outlined,
         label: 'Analyze',
         isLoading: _isProcessing,
@@ -1555,18 +1516,18 @@ Widget _buildEnhancedControlButton({
           onPressed: onPressed,
           style: ElevatedButton.styleFrom(
             backgroundColor: color,
-            foregroundColor: Colors.white,
+            foregroundColor: AppColors.parchment,
             padding: EdgeInsets.zero,
             shape: const CircleBorder(),
-            elevation: 8,  // Increased elevation
-            shadowColor: color.withOpacity(0.6),  // More visible shadow
+            elevation: 2,
+            shadowColor: AppColors.ink.withOpacity(0.2),
           ),
           child: isLoading
               ? SizedBox(
                   width: size * 0.4,  // Proportional to button size
                   height: size * 0.4,
                   child: CircularProgressIndicator(
-                    color: Colors.white,
+                    color: AppColors.parchment,
                     strokeWidth: 3,
                   ),
                 )
@@ -1582,7 +1543,7 @@ Widget _buildEnhancedControlButton({
         style: TextStyle(
           fontSize: 16,  // Increased font size
           fontWeight: FontWeight.w500,
-          color: onPressed == null ? Colors.grey : Colors.grey[800],
+          color: onPressed == null ? AppColors.line : AppColors.inkSoft,
         ),
       ),
     ],
@@ -1600,8 +1561,8 @@ Widget _buildEnhancedControlButton({
             Container(
               width: 80,
               height: 80,
-              decoration: BoxDecoration(
-                color: const Color(0xFF1F8A70).withOpacity(0.1),
+              decoration: const BoxDecoration(
+                color: AppColors.palmSoft,
                 shape: BoxShape.circle,
               ),
               child: Center(
@@ -1610,14 +1571,15 @@ Widget _buildEnhancedControlButton({
                   style: const TextStyle(
                     fontSize: 50,
                     fontWeight: FontWeight.bold,
-                    fontFamily: 'Scheherazade',
+                    fontFamily: 'Amiri Quran',
+                    color: AppColors.palmDeep,
                   ),
                 ),
               ),
             ),
-            
+
             const SizedBox(width: 16),
-            
+
             // Listen button - takes remaining space
             Expanded(
               child: SizedBox(
@@ -1626,24 +1588,24 @@ Widget _buildEnhancedControlButton({
                   onPressed: _isRecording || _isProcessing ? null : _playReferenceAudio,
                   icon: Icon(
                     _isPlayingReference ? Icons.stop : Icons.volume_up,
-                    color: Colors.white,
+                    color: AppColors.parchment,
                     size: 24,
                   ),
                   label: Text(
                     _isPlayingReference ? 'Stop' : 'Listen to\nPronunciation',
                     textAlign: TextAlign.center,
                     style: const TextStyle(
-                      color: Colors.white,
+                      color: AppColors.parchment,
                       fontWeight: FontWeight.w500,
                       fontSize: 14,
                     ),
                   ),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: _isPlayingReference 
-                        ? Colors.orange 
-                        : const Color(0xFF00A896),
+                    backgroundColor: _isPlayingReference
+                        ? AppColors.gold
+                        : AppColors.palm,
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
+                      borderRadius: AppRadius.smBorder,
                     ),
                   ),
                 ),
@@ -1651,27 +1613,20 @@ Widget _buildEnhancedControlButton({
             ),
           ],
         ),
-        
+
         // Collapsible pronunciation guide
         const SizedBox(height: 12),
         Container(
           width: double.infinity,
           decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: const Color(0xFF1F8A70).withOpacity(0.3)),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.05),
-                blurRadius: 4,
-                offset: const Offset(0, 2),
-              ),
-            ],
+            color: AppColors.card,
+            borderRadius: AppRadius.mdBorder,
+            border: Border.all(color: AppColors.line),
           ),
           child: Material(
             color: Colors.transparent,
             child: InkWell(
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: AppRadius.mdBorder,
               onTap: () {
                 setState(() {
                   _isPronunciationGuideExpanded = !_isPronunciationGuideExpanded;
@@ -1686,7 +1641,7 @@ Widget _buildEnhancedControlButton({
                       children: [
                         Icon(
                           Icons.speaker_notes,
-                          color: const Color(0xFF1F8A70),
+                          color: AppColors.palm,
                           size: 22,
                         ),
                         const SizedBox(width: 8),
@@ -1695,7 +1650,7 @@ Widget _buildEnhancedControlButton({
                           style: TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.bold,
-                            color: const Color(0xFF1F8A70),
+                            color: AppColors.palm,
                           ),
                         ),
                         const Spacer(),
@@ -1703,7 +1658,7 @@ Widget _buildEnhancedControlButton({
                           _isPronunciationGuideExpanded 
                               ? Icons.keyboard_arrow_up 
                               : Icons.keyboard_arrow_down,
-                          color: const Color(0xFF1F8A70),
+                          color: AppColors.palm,
                         ),
                       ],
                     ),
@@ -1771,7 +1726,7 @@ Widget _buildEnhancedControlButton({
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Icon(Icons.location_on_outlined, color: Colors.grey[700], size: 20),
+              Icon(Icons.location_on_outlined, color: AppColors.inkSoft, size: 20),
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
@@ -1779,7 +1734,7 @@ Widget _buildEnhancedControlButton({
                   style: TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w500,
-                    color: Colors.grey[800],
+                    color: AppColors.inkSoft,
                   ),
                 ),
               ),
@@ -1789,14 +1744,14 @@ Widget _buildEnhancedControlButton({
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Icon(Icons.gesture, color: Colors.grey[700], size: 20),
+              Icon(Icons.gesture, color: AppColors.inkSoft, size: 20),
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
                   guide['instruction']!,
                   style: TextStyle(
                     fontSize: 14,
-                    color: Colors.grey[800],
+                    color: AppColors.inkSoft,
                   ),
                 ),
               ),
@@ -1805,7 +1760,7 @@ Widget _buildEnhancedControlButton({
           const SizedBox(height: 10),
           Row(
             children: [
-              Icon(Icons.lightbulb_outline, color: Colors.amber[700], size: 20),
+              Icon(Icons.lightbulb_outline, color: AppColors.gold, size: 20),
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
@@ -1813,7 +1768,7 @@ Widget _buildEnhancedControlButton({
                   style: TextStyle(
                     fontSize: 13,
                     fontStyle: FontStyle.italic,
-                    color: Colors.amber[800],
+                    color: AppColors.gold,
                   ),
                 ),
               ),
@@ -1839,7 +1794,7 @@ Widget _buildEnhancedControlButton({
         onPressed: onPressed,
         style: ElevatedButton.styleFrom(
           backgroundColor: color,
-          foregroundColor: Colors.white,
+          foregroundColor: AppColors.parchment,
           padding: EdgeInsets.zero,
           shape: const CircleBorder(),
           elevation: 4,
@@ -1849,7 +1804,7 @@ Widget _buildEnhancedControlButton({
                 width: 24,
                 height: 24,
                 child: CircularProgressIndicator(
-                  color: Colors.white,
+                  color: AppColors.parchment,
                   strokeWidth: 3,
                 ),
               )
@@ -1870,21 +1825,21 @@ Widget _buildEnhancedControlButton({
         onPressed: _isRecording || _isProcessing ? null : _playReferenceAudio,
         icon: Icon(
           _isPlayingReference ? Icons.stop : Icons.volume_up,
-          color: Colors.white,
+          color: AppColors.parchment,
           size: 20,  // Smaller
         ),
         label: Text(
           _isPlayingReference ? 'Stop' : 'Listen to Pronunciation',
           style: const TextStyle(
-            color: Colors.white,
+            color: AppColors.parchment,
             fontWeight: FontWeight.w500,
             fontSize: 14,  // Smaller
           ),
         ),
         style: ElevatedButton.styleFrom(
           backgroundColor: _isPlayingReference 
-              ? Colors.orange 
-              : const Color(0xFF00A896),
+              ? AppColors.gold 
+              : AppColors.palm,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),
           ),
@@ -1914,7 +1869,7 @@ Widget _buildEnhancedControlButton({
           style: TextStyle(
             fontSize: 16,
             fontWeight: FontWeight.bold,
-            color: const Color(0xFF1F8A70),
+            color: AppColors.palm,
           ),
         ),
         const SizedBox(height: 4),
@@ -1923,14 +1878,14 @@ Widget _buildEnhancedControlButton({
           style: TextStyle(
             fontSize: 12,
             fontWeight: FontWeight.w500,
-            color: Colors.grey[800],
+            color: AppColors.inkSoft,
           ),
         ),
         Text(
           guide['instruction']!,
           style: TextStyle(
             fontSize: 12,
-            color: Colors.grey[700],
+            color: AppColors.inkSoft,
           ),
           maxLines: 2,
           overflow: TextOverflow.ellipsis,
@@ -1955,7 +1910,7 @@ Widget _buildEnhancedControlButton({
             if (_analysisResult!.containsKey('error')) ...[
               const Icon(
                 Icons.error_outline,
-                color: Colors.red,
+                color: AppColors.clay,
                 size: 40,
               ),
               const SizedBox(height: 4),
@@ -1963,7 +1918,7 @@ Widget _buildEnhancedControlButton({
                 _analysisResult!['error'],
                 textAlign: TextAlign.center,
                 style: const TextStyle(
-                  color: Colors.red,
+                  color: AppColors.clay,
                   fontSize: 14,
                   fontWeight: FontWeight.w500,
                 ),
@@ -1974,7 +1929,7 @@ Widget _buildEnhancedControlButton({
                 _analysisResult!['is_mismatch'] == true) ...[
               const Icon(
                 Icons.error_outline,
-                color: Colors.red,
+                color: AppColors.clay,
                 size: 40,
               ),
               const SizedBox(height: 8),
@@ -1983,7 +1938,7 @@ Widget _buildEnhancedControlButton({
                 style: const TextStyle(
                   fontSize: 20,
                   fontWeight: FontWeight.bold,
-                  color: Colors.red,
+                  color: AppColors.clay,
                 ),
               ),
               const SizedBox(height: 12),
@@ -1998,7 +1953,7 @@ Widget _buildEnhancedControlButton({
                         'Expected',
                         style: TextStyle(
                           fontSize: 12,
-                          color: Colors.grey[700],
+                          color: AppColors.inkSoft,
                         ),
                       ),
                       const SizedBox(height: 4),
@@ -2006,7 +1961,7 @@ Widget _buildEnhancedControlButton({
                         width: 50,
                         height: 50,
                         decoration: BoxDecoration(
-                          color: const Color(0xFF1F8A70).withOpacity(0.2),
+                          color: AppColors.palm.withOpacity(0.2),
                           shape: BoxShape.circle,
                         ),
                         child: Center(
@@ -2015,7 +1970,7 @@ Widget _buildEnhancedControlButton({
                             style: const TextStyle(
                               fontSize: 32,
                               fontWeight: FontWeight.bold,
-                              fontFamily: 'Scheherazade',
+                              fontFamily: 'Amiri Quran',
                             ),
                           ),
                         ),
@@ -2028,7 +1983,7 @@ Widget _buildEnhancedControlButton({
                     const SizedBox(width: 20),
                     const Icon(
                       Icons.arrow_forward,
-                      color: Colors.red,
+                      color: AppColors.clay,
                     ),
                     const SizedBox(width: 20),
                     Column(
@@ -2037,7 +1992,7 @@ Widget _buildEnhancedControlButton({
                           'Detected',
                           style: TextStyle(
                             fontSize: 12,
-                            color: Colors.grey[700],
+                            color: AppColors.inkSoft,
                           ),
                         ),
                         const SizedBox(height: 4),
@@ -2045,7 +2000,7 @@ Widget _buildEnhancedControlButton({
                           width: 50,
                           height: 50,
                           decoration: BoxDecoration(
-                            color: Colors.red.withOpacity(0.2),
+                            color: AppColors.clay.withOpacity(0.2),
                             shape: BoxShape.circle,
                           ),
                           child: Center(
@@ -2061,7 +2016,7 @@ Widget _buildEnhancedControlButton({
                               style: const TextStyle(
                                 fontSize: 32,
                                 fontWeight: FontWeight.bold,
-                                fontFamily: 'Scheherazade',
+                                fontFamily: 'Amiri Quran',
                               ),
                             ),
                           ),
@@ -2090,8 +2045,8 @@ Widget _buildEnhancedControlButton({
                   _recordingStatus = 'Ready to record again';
                 }),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF1F8A70),
-                  foregroundColor: Colors.white,
+                  backgroundColor: AppColors.palm,
+                  foregroundColor: AppColors.parchment,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(20),
                   ),
@@ -2141,7 +2096,7 @@ Widget _buildEnhancedControlButton({
                     child: LinearProgressIndicator(
                       value: _analysisResult!['confidence'] / 100,
                       minHeight: 8,
-                      backgroundColor: Colors.grey[300],
+                      backgroundColor: AppColors.line,
                       valueColor: AlwaysStoppedAnimation<Color>(
                         _getAssessmentColor(_analysisResult!['assessment']),
                       ),
@@ -2220,35 +2175,35 @@ Widget _buildEnhancedControlButton({
           'Select a letter to practice pronunciation',
           style: TextStyle(
             fontSize: 16,
-            color: Colors.grey[600],
+            color: AppColors.inkSoft,
             fontWeight: FontWeight.w500,
           ),
         ),
       );
     }
-    
+
     return Card(
       elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      shape: RoundedRectangleBorder(borderRadius: AppRadius.mdBorder),
       child: PageView(
         children: [
           _buildTipCard(
-            icon: Icons.record_voice_over, 
-            title: 'Clear Articulation', 
-            description: 'Focus on the exact point of articulation described above.', 
-            color: Colors.blue
+            icon: Icons.record_voice_over,
+            title: 'Clear Articulation',
+            description: 'Focus on the exact point of articulation described above.',
+            color: AppColors.palmDeep
           ),
           _buildTipCard(
-            icon: Icons.mic, 
-            title: 'Proper Volume', 
-            description: 'Speak clearly but naturally. Not too loud or soft.', 
-            color: Colors.purple
+            icon: Icons.mic,
+            title: 'Proper Volume',
+            description: 'Speak clearly but naturally. Not too loud or soft.',
+            color: AppColors.sage
           ),
           _buildTipCard(
             icon: Icons.speed, 
             title: 'Correct Duration', 
             description: 'Hold the sound for its proper duration.', 
-            color: Colors.orange
+            color: AppColors.gold
           ),
         ],
       ),
@@ -2270,7 +2225,7 @@ Widget _buildEnhancedControlButton({
             children: [
               Icon(
                 Icons.mic_off,
-                color: Colors.red,
+                color: AppColors.clay,
                 size: 50,
               ),
               SizedBox(height: 16),
@@ -2307,7 +2262,7 @@ Widget _buildEnhancedControlButton({
   Widget _buildTipCard({required IconData icon, required String title, required String description, required Color color}) {
     return Card(
       elevation: 4,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      shape: RoundedRectangleBorder(borderRadius: AppRadius.mdBorder),
       child: Padding(
         padding: const EdgeInsets.all(12.0),  // Reduced padding
         child: Column(
@@ -2378,29 +2333,23 @@ Widget _buildEnhancedControlButton({
       margin: const EdgeInsets.symmetric(vertical: 12),  // Reduced margin
       padding: const EdgeInsets.all(12),  // Reduced padding
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 6,
-            offset: const Offset(0, 2),
-          ),
-        ],
+        color: AppColors.card,
+        borderRadius: AppRadius.mdBorder,
+        border: Border.all(color: AppColors.line),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              Icon(Icons.speaker_notes, color: const Color(0xFF1F8A70)),
+              Icon(Icons.speaker_notes, color: AppColors.palm),
               const SizedBox(width: 8),
               Text(
                 'How to Pronounce',
                 style: TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
-                  color: const Color(0xFF1F8A70),
+                  color: AppColors.palm,
                 ),
               ),
             ],
@@ -2409,7 +2358,7 @@ Widget _buildEnhancedControlButton({
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Icon(Icons.location_on_outlined, color: Colors.grey[700], size: 20),
+              Icon(Icons.location_on_outlined, color: AppColors.inkSoft, size: 20),
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
@@ -2417,7 +2366,7 @@ Widget _buildEnhancedControlButton({
                   style: TextStyle(
                     fontSize: 15,
                     fontWeight: FontWeight.w500,
-                    color: Colors.grey[800],
+                    color: AppColors.inkSoft,
                   ),
                 ),
               ),
@@ -2427,14 +2376,14 @@ Widget _buildEnhancedControlButton({
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Icon(Icons.gesture, color: Colors.grey[700], size: 20),
+              Icon(Icons.gesture, color: AppColors.inkSoft, size: 20),
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
                   guide['instruction']!,
                   style: TextStyle(
                     fontSize: 15,
-                    color: Colors.grey[800],
+                    color: AppColors.inkSoft,
                   ),
                 ),
               ),
@@ -2443,7 +2392,7 @@ Widget _buildEnhancedControlButton({
           const SizedBox(height: 16),
           Row(
             children: [
-              Icon(Icons.lightbulb_outline, color: Colors.amber[700], size: 20),
+              Icon(Icons.lightbulb_outline, color: AppColors.gold, size: 20),
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
@@ -2451,7 +2400,7 @@ Widget _buildEnhancedControlButton({
                   style: TextStyle(
                     fontSize: 14,
                     fontStyle: FontStyle.italic,
-                    color: Colors.amber[800],
+                    color: AppColors.gold,
                   ),
                 ),
               ),
@@ -2467,7 +2416,7 @@ void _showResultsPopup(Map<String, dynamic> result) {
   showDialog(
     context: context,
     builder: (context) => Dialog(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      shape: RoundedRectangleBorder(borderRadius: AppRadius.mdBorder),
       child: Container(
         width: double.infinity,
         constraints: BoxConstraints(
@@ -2484,7 +2433,7 @@ void _showResultsPopup(Map<String, dynamic> result) {
                 style: TextStyle(
                   fontSize: 22,
                   fontWeight: FontWeight.bold,
-                  color: const Color(0xFF1F8A70),
+                  color: AppColors.palm,
                 ),
               ),
               const SizedBox(height: 20),
@@ -2493,7 +2442,7 @@ void _showResultsPopup(Map<String, dynamic> result) {
               if (result.containsKey('error')) ...[
                 const Icon(
                   Icons.error_outline,
-                  color: Colors.red,
+                  color: AppColors.clay,
                   size: 48,
                 ),
                 const SizedBox(height: 8),
@@ -2501,7 +2450,7 @@ void _showResultsPopup(Map<String, dynamic> result) {
                   result['error'],
                   textAlign: TextAlign.center,
                   style: const TextStyle(
-                    color: Colors.red,
+                    color: AppColors.clay,
                     fontSize: 16,
                     fontWeight: FontWeight.w500,
                   ),
@@ -2512,7 +2461,7 @@ void _showResultsPopup(Map<String, dynamic> result) {
                   result['is_mismatch'] == true) ...[
                 const Icon(
                   Icons.error_outline,
-                  color: Colors.red,
+                  color: AppColors.clay,
                   size: 48,
                 ),
                 const SizedBox(height: 12),
@@ -2521,7 +2470,7 @@ void _showResultsPopup(Map<String, dynamic> result) {
                   style: const TextStyle(
                     fontSize: 24,
                     fontWeight: FontWeight.bold,
-                    color: Colors.red,
+                    color: AppColors.clay,
                   ),
                 ),
                 const SizedBox(height: 20),
@@ -2536,7 +2485,7 @@ void _showResultsPopup(Map<String, dynamic> result) {
                           'Expected',
                           style: TextStyle(
                             fontSize: 14,
-                            color: Colors.grey[700],
+                            color: AppColors.inkSoft,
                           ),
                         ),
                         const SizedBox(height: 8),
@@ -2544,7 +2493,7 @@ void _showResultsPopup(Map<String, dynamic> result) {
                           width: 70,
                           height: 70,
                           decoration: BoxDecoration(
-                            color: const Color(0xFF1F8A70).withOpacity(0.2),
+                            color: AppColors.palm.withOpacity(0.2),
                             shape: BoxShape.circle,
                           ),
                           child: Center(
@@ -2553,7 +2502,7 @@ void _showResultsPopup(Map<String, dynamic> result) {
                               style: const TextStyle(
                                 fontSize: 40,
                                 fontWeight: FontWeight.bold,
-                                fontFamily: 'Scheherazade',
+                                fontFamily: 'Amiri Quran',
                               ),
                             ),
                           ),
@@ -2566,7 +2515,7 @@ void _showResultsPopup(Map<String, dynamic> result) {
                       const SizedBox(width: 30),
                       const Icon(
                         Icons.arrow_forward,
-                        color: Colors.red,
+                        color: AppColors.clay,
                         size: 30,
                       ),
                       const SizedBox(width: 30),
@@ -2576,7 +2525,7 @@ void _showResultsPopup(Map<String, dynamic> result) {
                             'Detected',
                             style: TextStyle(
                               fontSize: 14,
-                              color: Colors.grey[700],
+                              color: AppColors.inkSoft,
                             ),
                           ),
                           const SizedBox(height: 8),
@@ -2584,7 +2533,7 @@ void _showResultsPopup(Map<String, dynamic> result) {
                             width: 70,
                             height: 70,
                             decoration: BoxDecoration(
-                              color: Colors.red.withOpacity(0.2),
+                              color: AppColors.clay.withOpacity(0.2),
                               shape: BoxShape.circle,
                             ),
                             child: Center(
@@ -2600,7 +2549,7 @@ void _showResultsPopup(Map<String, dynamic> result) {
                                 style: const TextStyle(
                                   fontSize: 40,
                                   fontWeight: FontWeight.bold,
-                                  fontFamily: 'Scheherazade',
+                                  fontFamily: 'Amiri Quran',
                                 ),
                               ),
                             ),
@@ -2615,9 +2564,9 @@ void _showResultsPopup(Map<String, dynamic> result) {
                 Container(
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: Colors.red.withOpacity(0.1),
+                    color: AppColors.clay.withOpacity(0.1),
                     borderRadius: BorderRadius.circular(10),
-                    border: Border.all(color: Colors.red.withOpacity(0.3)),
+                    border: Border.all(color: AppColors.clay.withOpacity(0.3)),
                   ),
                   child: Text(
                     result['feedback'],
@@ -2645,7 +2594,7 @@ void _showResultsPopup(Map<String, dynamic> result) {
                       style: const TextStyle(
                         fontSize: 50,
                         fontWeight: FontWeight.bold,
-                        fontFamily: 'Scheherazade',
+                        fontFamily: 'Amiri Quran',
                       ),
                     ),
                   ),
@@ -2691,7 +2640,7 @@ void _showResultsPopup(Map<String, dynamic> result) {
                       child: LinearProgressIndicator(
                         value: result['confidence'] / 100,
                         minHeight: 10,
-                        backgroundColor: Colors.grey[300],
+                        backgroundColor: AppColors.line,
                         valueColor: AlwaysStoppedAnimation<Color>(
                           _getAssessmentColor(result['assessment']),
                         ),
@@ -2741,8 +2690,8 @@ void _showResultsPopup(Map<String, dynamic> result) {
                 child: ElevatedButton(
                   onPressed: () => Navigator.of(context).pop(),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF1F8A70),
-                    foregroundColor: Colors.white,
+                    backgroundColor: AppColors.palm,
+                    foregroundColor: AppColors.parchment,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),
                     ),

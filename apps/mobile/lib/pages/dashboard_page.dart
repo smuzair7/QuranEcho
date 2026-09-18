@@ -6,6 +6,7 @@ import 'login_page.dart';
 import 'surah_progress_page.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'dart:math' as math;
+import '../theme/app_theme.dart';
 
 class DashboardPage extends StatefulWidget {
   const DashboardPage({super.key});
@@ -22,22 +23,22 @@ class _DashboardPageState extends State<DashboardPage> {
   int _dailyGoal = 10;
   int _streakDays = 0;
   List<int> _weeklyProgress = [0, 0, 0, 0, 0, 0, 0];
-  
+
   // Services
   final UserStatsService _userStatsService = UserStatsService();
-  
+
   // Controller for updating daily goal
   final TextEditingController _goalController = TextEditingController();
-  
+
   // Loading state
   bool _isLoading = true;
   String _error = '';
-  
+
   @override
   void initState() {
     super.initState();
     _loadUserStats();
-    
+
     // Add this to reload stats when the page becomes visible
     WidgetsBinding.instance.addPostFrameCallback((_) {
       // This ensures stats are reloaded when returning to this page
@@ -45,22 +46,22 @@ class _DashboardPageState extends State<DashboardPage> {
       _loadUserStats();
     });
   }
-  
+
   @override
   void dispose() {
     _goalController.dispose();
     super.dispose();
   }
-  
+
   // Load user stats from server
   void _loadUserStats() async {
     print('Loading user stats for dashboard...');
     final userProvider = Provider.of<UserProvider>(context, listen: false);
-    
+
     // Only load stats if user is logged in AND userId is not null
     if (userProvider.isLoggedIn && userProvider.userId != null) {
       final userIdValue = userProvider.userId!;
-      
+
       print('Found logged in user with ID: $userIdValue');
       // Validate user ID - should be a MongoDB ObjectId (24 character hex string)
       if (userIdValue.isEmpty || userIdValue.length != 24) {
@@ -71,20 +72,20 @@ class _DashboardPageState extends State<DashboardPage> {
         });
         return;
       }
-      
+
       setState(() {
         _isLoading = true;
         _error = '';
       });
-      
+
       try {
         print('Requesting fresh stats from server for user: $userIdValue');
         final result = await _userStatsService.getUserStats(userIdValue);
-        
+
         if (result['success']) {
           final stats = result['data'];
           print('Received stats from server: ${stats.toString()}');
-          
+
           setState(() {
             _memorizedAyats = stats['memorizedAyats'] ?? 0;
             _memorizedSurahs = stats['memorizedSurahs'] ?? 0;
@@ -95,7 +96,7 @@ class _DashboardPageState extends State<DashboardPage> {
             _goalController.text = _dailyGoal.toString();
             _isLoading = false;
           });
-          
+
           // Update user provider with latest stats
           await userProvider.updateUserStats(stats);
           print('Updated UserProvider with fresh stats');
@@ -122,7 +123,7 @@ class _DashboardPageState extends State<DashboardPage> {
         });
         return;
       }
-      
+
       // If user stats are already in provider, use those
       if (userProvider.userStats != null) {
         final stats = userProvider.userStats!;
@@ -136,55 +137,54 @@ class _DashboardPageState extends State<DashboardPage> {
           _goalController.text = _dailyGoal.toString();
         });
       }
-      
+
       setState(() {
         _isLoading = false;
       });
     }
   }
-  
+
   String _formatTimeSpent(int minutes) {
     final hours = minutes ~/ 60;
     final remainingMinutes = minutes % 60;
     return '$hours hrs $remainingMinutes mins';
   }
-  
+
   void _showGoalDialog() {
     showDialog(
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          title: const Text('Set Daily Goal'),
+          title: const Text('Set daily goal'),
           content: TextField(
             controller: _goalController,
             keyboardType: TextInputType.number,
             decoration: const InputDecoration(
               labelText: 'Ayats per day',
-              border: OutlineInputBorder(),
             ),
           ),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context),
-              child: const Text('CANCEL'),
+              child: const Text('Cancel'),
             ),
             ElevatedButton(
               onPressed: () => _updateDailyGoal(context),
-              child: const Text('SAVE'),
+              child: const Text('Save'),
             ),
           ],
         );
       },
     );
   }
-  
+
   // Update daily goal on the server
   void _updateDailyGoal(BuildContext context) async {
     final userProvider = Provider.of<UserProvider>(context, listen: false);
-    
+
     if (userProvider.isLoggedIn && userProvider.userId != null) {
       final userIdValue = userProvider.userId!;
-      
+
       // Validate user ID
       if (userIdValue.isEmpty) {
         print('Error: Empty user ID in provider');
@@ -194,40 +194,40 @@ class _DashboardPageState extends State<DashboardPage> {
         Navigator.pop(context);
         return;
       }
-      
+
       final newGoal = int.tryParse(_goalController.text) ?? _dailyGoal;
-      
+
       if (newGoal <= 0) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Goal must be a positive number')),
         );
         return;
       }
-      
+
       // Show loading indicator
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Updating goal...')),
       );
-      
+
       try {
         print('Updating goal to $newGoal for user ID: $userIdValue');
         final result = await _userStatsService.updateDailyGoal(
           userIdValue,
           newGoal,
         );
-        
+
         if (result['success']) {
           setState(() {
             _dailyGoal = newGoal;
           });
-          
+
           // Update user provider with new stats
           if (userProvider.userStats != null) {
             final updatedStats = Map<String, dynamic>.from(userProvider.userStats!);
             updatedStats['dailyGoal'] = newGoal;
             await userProvider.updateUserStats(updatedStats);
           }
-          
+
           Navigator.pop(context);
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text('Daily goal updated')),
@@ -252,7 +252,7 @@ class _DashboardPageState extends State<DashboardPage> {
       );
     }
   }
-  
+
   // Add method to get dynamic achievements based on user stats
   List<Map<String, dynamic>> _getAchievements() {
     return [
@@ -342,45 +342,34 @@ class _DashboardPageState extends State<DashboardPage> {
   @override
   Widget build(BuildContext context) {
     final userProvider = Provider.of<UserProvider>(context);
-    
+
     // If user is not logged in, show login prompt
     if (!userProvider.isLoggedIn) {
       return Scaffold(
-        appBar: AppBar(
-          title: const Text('Dashboard'),
-          backgroundColor: const Color(0xFF00A896),
-          foregroundColor: Colors.white,
-        ),
-        body: Container(
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-              colors: [
-                Theme.of(context).colorScheme.primary.withOpacity(0.8),
-                Theme.of(context).colorScheme.primaryContainer,
-              ],
-            ),
-          ),
-          child: Center(
+        backgroundColor: AppColors.parchment,
+        appBar: AppBar(title: const Text('Dashboard')),
+        body: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(AppSpacing.lg),
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                const Icon(
-                  Icons.lock,
-                  size: 80,
-                  color: Colors.white,
-                ),
-                const SizedBox(height: 20),
-                const Text(
-                  'Please log in to view your dashboard',
-                  style: TextStyle(
-                    fontSize: 18,
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
+                Container(
+                  width: 88,
+                  height: 88,
+                  decoration: const BoxDecoration(
+                    color: AppColors.palmSoft,
+                    shape: BoxShape.circle,
                   ),
+                  child: const Icon(Icons.lock_outline_rounded, size: 40, color: AppColors.palm),
                 ),
-                const SizedBox(height: 30),
+                const SizedBox(height: AppSpacing.lg),
+                Text(
+                  'Log in to view your dashboard',
+                  style: Theme.of(context).textTheme.titleLarge,
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: AppSpacing.lg),
                 ElevatedButton.icon(
                   onPressed: () {
                     Navigator.push(
@@ -388,17 +377,8 @@ class _DashboardPageState extends State<DashboardPage> {
                       MaterialPageRoute(builder: (context) => const LoginPage()),
                     );
                   },
-                  icon: const Icon(Icons.login),
-                  label: const Text('Login Now'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.white,
-                    foregroundColor: Theme.of(context).colorScheme.primary,
-                    padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 15),
-                    textStyle: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
+                  icon: const Icon(Icons.login_rounded),
+                  label: const Text('Log in'),
                 ),
               ],
             ),
@@ -406,92 +386,48 @@ class _DashboardPageState extends State<DashboardPage> {
         ),
       );
     }
-    
+
     // Show loading indicator while fetching data
     if (_isLoading) {
       return Scaffold(
-        appBar: AppBar(
-          title: const Text('Dashboard'),
-          backgroundColor: const Color(0xFF00A896),
-          foregroundColor: Colors.white,
-        ),
-        body: Container(
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-              colors: [
-                Colors.black87,
-                const Color(0xFF121212), // Very dark gray
-              ],
-            ),
-          ),
-          child: const Center(
-            child: CircularProgressIndicator(
-              color: Color(0xFF00A896),
-            ),
-          ),
-        ),
+        backgroundColor: AppColors.parchment,
+        appBar: AppBar(title: const Text('Dashboard')),
+        body: const Center(child: CircularProgressIndicator()),
       );
     }
-    
+
     // Show error message if there was an error loading data
     if (_error.isNotEmpty) {
       return Scaffold(
-        appBar: AppBar(
-          title: const Text('Dashboard'),
-          backgroundColor: const Color(0xFF00A896),
-          foregroundColor: Colors.white,
-        ),
-        body: Container(
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-              colors: [
-                Colors.black87,
-                const Color(0xFF121212), // Very dark gray
-              ],
-            ),
-          ),
-          child: Center(
+        backgroundColor: AppColors.parchment,
+        appBar: AppBar(title: const Text('Dashboard')),
+        body: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(AppSpacing.lg),
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 const Icon(
-                  Icons.error_outline,
-                  size: 80,
-                  color: Colors.red,
+                  Icons.error_outline_rounded,
+                  size: 56,
+                  color: AppColors.clay,
                 ),
-                const SizedBox(height: 20),
+                const SizedBox(height: AppSpacing.md),
                 Text(
-                  'Failed to load dashboard data',
-                  style: TextStyle(
-                    fontSize: 18,
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                  ),
+                  'Couldn’t load dashboard data',
+                  style: Theme.of(context).textTheme.titleLarge,
                 ),
-                const SizedBox(height: 10),
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 30),
-                  child: Text(
-                    _error,
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      color: Colors.white70,
-                    ),
-                  ),
+                const SizedBox(height: AppSpacing.xs),
+                Text(
+                  _error,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(color: AppColors.inkSoft),
                 ),
-                const SizedBox(height: 30),
+                const SizedBox(height: AppSpacing.lg),
                 ElevatedButton.icon(
                   onPressed: _loadUserStats,
-                  icon: const Icon(Icons.refresh),
-                  label: const Text('Try Again'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF00A896),
-                    foregroundColor: Colors.white,
-                  ),
+                  icon: const Icon(Icons.refresh_rounded),
+                  label: const Text('Try again'),
                 ),
               ],
             ),
@@ -499,16 +435,15 @@ class _DashboardPageState extends State<DashboardPage> {
         ),
       );
     }
-    
+
     // User is logged in, show dashboard
     return Scaffold(
+      backgroundColor: AppColors.parchment,
       appBar: AppBar(
         title: const Text('Dashboard'),
-        backgroundColor: const Color(0xFF00A896),
-        foregroundColor: Colors.white,
         actions: [
           IconButton(
-            icon: const Icon(Icons.refresh),
+            icon: const Icon(Icons.refresh_rounded),
             tooltip: 'Refresh data',
             onPressed: () {
               // Show loading indicator while refreshing
@@ -520,185 +455,138 @@ class _DashboardPageState extends State<DashboardPage> {
           ),
         ],
       ),
-      body: Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [
-              Colors.black87,
-              const Color(0xFF121212), // Very dark gray
-            ],
-          ),
-        ),
-        child: SafeArea(
-          child: RefreshIndicator(
-            onRefresh: () async {
-              _loadUserStats();
-            },
-            color: const Color(0xFF00A896),
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.all(16.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // User profile card
-                  Card(
-                    elevation: 4,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(15),
-                    ),
-                    color: const Color(0xFF1E1E1E),
-                    child: Padding(
-                      padding: const EdgeInsets.all(16.0),
-                      child: Row(
-                        children: [
-                          CircleAvatar(
-                            radius: 40,
-                            backgroundColor: Theme.of(context).colorScheme.primary,
-                            child: Text(
-                              userProvider.username?.substring(0, 1).toUpperCase() ?? 'U',
-                              style: const TextStyle(
-                                fontSize: 30,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.white,
+      body: SafeArea(
+        child: RefreshIndicator(
+          onRefresh: () async {
+            _loadUserStats();
+          },
+          child: SingleChildScrollView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            padding: const EdgeInsets.all(AppSpacing.lg),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // User profile card
+                Card(
+                  child: Padding(
+                    padding: const EdgeInsets.all(AppSpacing.md),
+                    child: Row(
+                      children: [
+                        CircleAvatar(
+                          radius: 32,
+                          backgroundColor: AppColors.palm,
+                          child: Text(
+                            userProvider.username?.substring(0, 1).toUpperCase() ?? 'U',
+                            style: const TextStyle(
+                              fontSize: 26,
+                              fontWeight: FontWeight.bold,
+                              color: AppColors.parchment,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: AppSpacing.md),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                userProvider.username ?? 'User',
+                                style: Theme.of(context).textTheme.titleLarge,
                               ),
-                            ),
-                          ),
-                          const SizedBox(width: 16),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  userProvider.username ?? 'User',
-                                  style: const TextStyle(
-                                    fontSize: 22,
-                                    fontWeight: FontWeight.bold,
-                                    color: Colors.white,
-                                  ),
-                                ),
-                                const SizedBox(height: 4),
-                                Text(
-                                  'Member since: January 2023',
-                                  style: TextStyle(
-                                    fontSize: 14,
-                                    color: Colors.grey[400],
-                                  ),
-                                ),
-                                const SizedBox(height: 8),
-                                Row(
-                                  children: [
-                                    Icon(Icons.local_fire_department, 
-                                         color: Colors.orange[600], size: 20),
-                                    const SizedBox(width: 4),
-                                    Text(
-                                      '$_streakDays day streak',
-                                      style: TextStyle(
-                                        color: Colors.orange[600],
-                                        fontWeight: FontWeight.bold,
-                                      ),
+                              const SizedBox(height: 4),
+                              Row(
+                                children: [
+                                  const Icon(Icons.local_fire_department_rounded,
+                                      color: AppColors.gold, size: 18),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    '$_streakDays day streak',
+                                    style: const TextStyle(
+                                      color: AppColors.gold,
+                                      fontWeight: FontWeight.w600,
                                     ),
-                                  ],
-                                ),
-                              ],
-                            ),
+                                  ),
+                                ],
+                              ),
+                            ],
                           ),
-                        ],
-                      ),
+                        ),
+                      ],
                     ),
                   ),
-                  
-                  const SizedBox(height: 24),
-                  
-                  // Stats Grid
-                  const Text(
-                    'Your Progress',
-                    style: TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
+                ),
+
+                const SizedBox(height: AppSpacing.lg),
+
+                // Stats Grid
+                Text('Your progress', style: Theme.of(context).textTheme.titleLarge),
+                const SizedBox(height: AppSpacing.sm),
+                GridView.count(
+                  crossAxisCount: 2,
+                  crossAxisSpacing: AppSpacing.sm,
+                  mainAxisSpacing: AppSpacing.sm,
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  childAspectRatio: 1.3,
+                  children: [
+                    _buildStatCard(
+                      title: 'Memorized ayats',
+                      value: _memorizedAyats.toString(),
+                      icon: Icons.auto_stories_rounded,
+                      color: AppColors.palm,
                     ),
-                  ),
-                  const SizedBox(height: 12),
-                  GridView.count(
-                    crossAxisCount: 2,
-                    crossAxisSpacing: 10,
-                    mainAxisSpacing: 10,
-                    shrinkWrap: true,
-                    physics: const NeverScrollableScrollPhysics(),
-                    children: [
-                      _buildStatCard(
-                        title: 'Memorized Ayats',
-                        value: _memorizedAyats.toString(),
-                        icon: Icons.auto_stories,
-                        color: const Color(0xFF00A896),
-                      ),
-                      _buildClickableStatCard(
-                        title: 'Completed Surahs',
-                        value: _memorizedSurahs.toString(),
-                        icon: Icons.bookmark,
-                        color: const Color(0xFF05668D),
-                        onTap: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => const SurahProgressPage(),
-                            ),
-                          );
-                        },
-                      ),
-                      _buildStatCard(
-                        title: 'Time Spent',
-                        value: _formatTimeSpent(_timeSpentMinutes),
-                        icon: Icons.timer,
-                        color: const Color(0xFF028090),
-                      ),
-                      _buildGoalCard(
-                        title: 'Daily Goal',
-                        value: '$_dailyGoal ayats/day',
-                        icon: Icons.flag,
-                        color: const Color(0xFF1F8A70),
-                        onTap: _showGoalDialog,
-                      ),
-                    ],
-                  ),
-                  
-                  const SizedBox(height: 24),
-                  
-                  // Weekly Progress Chart
-                  const Text(
-                    'Weekly Progress',
-                    style: TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
+                    _buildClickableStatCard(
+                      title: 'Completed surahs',
+                      value: _memorizedSurahs.toString(),
+                      icon: Icons.bookmark_rounded,
+                      color: AppColors.sage,
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const SurahProgressPage(),
+                          ),
+                        );
+                      },
                     ),
-                  ),
-                  const SizedBox(height: 12),
-                  Container(
+                    _buildStatCard(
+                      title: 'Time spent',
+                      value: _formatTimeSpent(_timeSpentMinutes),
+                      icon: Icons.timer_rounded,
+                      color: AppColors.palmDeep,
+                    ),
+                    _buildGoalCard(
+                      title: 'Daily goal',
+                      value: '$_dailyGoal ayats/day',
+                      icon: Icons.flag_rounded,
+                      color: AppColors.gold,
+                      onTap: _showGoalDialog,
+                    ),
+                  ],
+                ),
+
+                const SizedBox(height: AppSpacing.lg),
+
+                // Weekly Progress Chart
+                Text('Weekly progress', style: Theme.of(context).textTheme.titleLarge),
+                const SizedBox(height: AppSpacing.sm),
+                Card(
+                  child: Container(
                     height: 250,
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF1E1E1E),
-                      borderRadius: BorderRadius.circular(15),
-                    ),
+                    padding: const EdgeInsets.all(AppSpacing.md),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
-                          'Ayats Memorized: Last 7 Days',
-                          style: TextStyle(
-                            fontSize: 15,
-                            color: Colors.grey[400],
-                          ),
+                        const Text(
+                          'Ayats memorized: last 7 days',
+                          style: TextStyle(fontSize: 14, color: AppColors.inkSoft),
                         ),
-                        const SizedBox(height: 20),
+                        const SizedBox(height: AppSpacing.md),
                         Expanded(
                           child: BarChart(
                             BarChartData(
                               alignment: BarChartAlignment.spaceAround,
-                              maxY: _weeklyProgress.isEmpty 
+                              maxY: _weeklyProgress.isEmpty
                                   ? 10
                                   : (_weeklyProgress.reduce((a, b) => a > b ? a : b) * 1.2),
                               titlesData: FlTitlesData(
@@ -711,8 +599,8 @@ class _DashboardPageState extends State<DashboardPage> {
                                       if (value.toInt() >= 0 && value.toInt() < days.length) {
                                         return Text(
                                           days[value.toInt()],
-                                          style: TextStyle(
-                                            color: Colors.grey[400],
+                                          style: const TextStyle(
+                                            color: AppColors.inkSoft,
                                             fontSize: 12,
                                           ),
                                         );
@@ -729,8 +617,8 @@ class _DashboardPageState extends State<DashboardPage> {
                                       if (value % 5 == 0) {
                                         return Text(
                                           value.toInt().toString(),
-                                          style: TextStyle(
-                                            color: Colors.grey[400],
+                                          style: const TextStyle(
+                                            color: AppColors.inkSoft,
                                             fontSize: 12,
                                           ),
                                         );
@@ -751,8 +639,8 @@ class _DashboardPageState extends State<DashboardPage> {
                                 drawVerticalLine: false,
                                 horizontalInterval: 5,
                                 getDrawingHorizontalLine: (value) {
-                                  return FlLine(
-                                    color: Colors.grey[800],
+                                  return const FlLine(
+                                    color: AppColors.line,
                                     strokeWidth: 1,
                                   );
                                 },
@@ -765,8 +653,8 @@ class _DashboardPageState extends State<DashboardPage> {
                                     BarChartRodData(
                                       toY: entry.value.toDouble(),
                                       color: entry.value >= _dailyGoal
-                                          ? const Color(0xFF00A896)
-                                          : Colors.redAccent,
+                                          ? AppColors.palm
+                                          : AppColors.sage,
                                       width: 16,
                                       borderRadius: const BorderRadius.only(
                                         topLeft: Radius.circular(4),
@@ -782,25 +670,16 @@ class _DashboardPageState extends State<DashboardPage> {
                       ],
                     ),
                   ),
-                  
-                  const SizedBox(height: 24),
-                  
-                  // Achievement Section
-                  const Text(
-                    'Achievements',
-                    style: TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  Container(
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF1E1E1E),
-                      borderRadius: BorderRadius.circular(15),
-                    ),
+                ),
+
+                const SizedBox(height: AppSpacing.lg),
+
+                // Achievement Section
+                Text('Achievements', style: Theme.of(context).textTheme.titleLarge),
+                const SizedBox(height: AppSpacing.sm),
+                Card(
+                  child: Padding(
+                    padding: const EdgeInsets.all(AppSpacing.md),
                     child: Column(
                       children: _getAchievements().map((achievement) => _buildAchievementItem(
                         icon: achievement['icon'],
@@ -814,17 +693,17 @@ class _DashboardPageState extends State<DashboardPage> {
                       )).toList(),
                     ),
                   ),
-                  
-                  const SizedBox(height: 30),
-                ],
-              ),
+                ),
+
+                const SizedBox(height: AppSpacing.lg),
+              ],
             ),
           ),
         ),
       ),
     );
   }
-  
+
   Widget _buildStatCard({
     required String title,
     required String value,
@@ -832,45 +711,33 @@ class _DashboardPageState extends State<DashboardPage> {
     required Color color,
   }) {
     return Card(
-      elevation: 2,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(15),
-      ),
-      color: const Color(0xFF1E1E1E),
       child: Padding(
-        padding: const EdgeInsets.all(16.0),
+        padding: const EdgeInsets.all(AppSpacing.md),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Icon(
-              icon,
-              size: 30,
-              color: color,
-            ),
-            const SizedBox(height: 12),
+            Icon(icon, size: 26, color: color),
+            const SizedBox(height: 10),
             Text(
               value,
               style: const TextStyle(
-                fontSize: 22,
+                fontSize: 20,
                 fontWeight: FontWeight.bold,
-                color: Colors.white,
+                color: AppColors.ink,
               ),
             ),
-            const SizedBox(height: 4),
+            const SizedBox(height: 2),
             Text(
               title,
-              style: TextStyle(
-                fontSize: 14,
-                color: Colors.grey[400],
-              ),
+              style: const TextStyle(fontSize: 13, color: AppColors.inkSoft),
             ),
           ],
         ),
       ),
     );
   }
-  
+
   Widget _buildGoalCard({
     required String title,
     required String value,
@@ -880,15 +747,10 @@ class _DashboardPageState extends State<DashboardPage> {
   }) {
     return InkWell(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(15),
+      borderRadius: AppRadius.mdBorder,
       child: Card(
-        elevation: 2,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(15),
-        ),
-        color: const Color(0xFF1E1E1E),
         child: Padding(
-          padding: const EdgeInsets.all(16.0),
+          padding: const EdgeInsets.all(AppSpacing.md),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -896,34 +758,23 @@ class _DashboardPageState extends State<DashboardPage> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Icon(
-                    icon,
-                    size: 30,
-                    color: color,
-                  ),
-                  Icon(
-                    Icons.edit,
-                    size: 18,
-                    color: Colors.grey[400],
-                  ),
+                  Icon(icon, size: 26, color: color),
+                  const Icon(Icons.edit_rounded, size: 16, color: AppColors.inkSoft),
                 ],
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 10),
               Text(
                 value,
                 style: const TextStyle(
-                  fontSize: 22,
+                  fontSize: 20,
                   fontWeight: FontWeight.bold,
-                  color: Colors.white,
+                  color: AppColors.ink,
                 ),
               ),
-              const SizedBox(height: 4),
+              const SizedBox(height: 2),
               Text(
                 title,
-                style: TextStyle(
-                  fontSize: 14,
-                  color: Colors.grey[400],
-                ),
+                style: const TextStyle(fontSize: 13, color: AppColors.inkSoft),
               ),
             ],
           ),
@@ -931,7 +782,7 @@ class _DashboardPageState extends State<DashboardPage> {
       ),
     );
   }
-  
+
   Widget _buildClickableStatCard({
     required String title,
     required String value,
@@ -941,15 +792,10 @@ class _DashboardPageState extends State<DashboardPage> {
   }) {
     return InkWell(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(15),
+      borderRadius: AppRadius.mdBorder,
       child: Card(
-        elevation: 2,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(15),
-        ),
-        color: const Color(0xFF1E1E1E),
         child: Padding(
-          padding: const EdgeInsets.all(16.0),
+          padding: const EdgeInsets.all(AppSpacing.md),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -957,34 +803,23 @@ class _DashboardPageState extends State<DashboardPage> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Icon(
-                    icon,
-                    size: 30,
-                    color: color,
-                  ),
-                  Icon(
-                    Icons.arrow_forward_ios,
-                    size: 16,
-                    color: Colors.grey[400],
-                  ),
+                  Icon(icon, size: 26, color: color),
+                  const Icon(Icons.chevron_right_rounded, size: 20, color: AppColors.inkSoft),
                 ],
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 10),
               Text(
                 value,
                 style: const TextStyle(
-                  fontSize: 22,
+                  fontSize: 20,
                   fontWeight: FontWeight.bold,
-                  color: Colors.white,
+                  color: AppColors.ink,
                 ),
               ),
-              const SizedBox(height: 4),
+              const SizedBox(height: 2),
               Text(
                 title,
-                style: TextStyle(
-                  fontSize: 14,
-                  color: Colors.grey[400],
-                ),
+                style: const TextStyle(fontSize: 13, color: AppColors.inkSoft),
               ),
             ],
           ),
@@ -992,7 +827,7 @@ class _DashboardPageState extends State<DashboardPage> {
       ),
     );
   }
-  
+
   Widget _buildAchievementItem({
     required IconData icon,
     required String title,
@@ -1028,27 +863,27 @@ class _DashboardPageState extends State<DashboardPage> {
       child: Container(
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: AppRadius.smBorder,
           border: Border.all(
-            color: isCompleted 
-                ? const Color(0xFF00A896).withOpacity(0.3)
-                : Colors.grey.withOpacity(0.2),
+            color: isCompleted
+                ? AppColors.palm.withOpacity(0.4)
+                : AppColors.line,
             width: 1,
           ),
-          color: isCompleted 
-              ? const Color(0xFF00A896).withOpacity(0.1)
+          color: isCompleted
+              ? AppColors.palmSoft.withOpacity(0.5)
               : Colors.transparent,
         ),
         child: Row(
           children: [
             Container(
-              width: 50,
-              height: 50,
+              width: 48,
+              height: 48,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 color: isCompleted
-                    ? const Color(0xFF00A896).withOpacity(0.2)
-                    : Colors.grey.withOpacity(0.2),
+                    ? AppColors.palmSoft
+                    : AppColors.line.withOpacity(0.4),
               ),
               child: Stack(
                 alignment: Alignment.center,
@@ -1057,20 +892,18 @@ class _DashboardPageState extends State<DashboardPage> {
                     CircularProgressIndicator(
                       value: progress,
                       strokeWidth: 3,
-                      backgroundColor: Colors.grey.withOpacity(0.3),
-                      valueColor: AlwaysStoppedAnimation<Color>(
-                        const Color(0xFF00A896).withOpacity(0.7),
-                      ),
+                      backgroundColor: AppColors.line,
+                      valueColor: const AlwaysStoppedAnimation<Color>(AppColors.sage),
                     ),
                   Icon(
                     icon,
-                    color: isCompleted ? const Color(0xFF00A896) : Colors.grey,
-                    size: 24,
+                    color: isCompleted ? AppColors.palm : AppColors.inkSoft,
+                    size: 22,
                   ),
                 ],
               ),
             ),
-            const SizedBox(width: 16),
+            const SizedBox(width: AppSpacing.md),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -1082,24 +915,24 @@ class _DashboardPageState extends State<DashboardPage> {
                           title,
                           style: TextStyle(
                             fontWeight: FontWeight.bold,
-                            fontSize: 16,
-                            color: isCompleted ? Colors.white : Colors.grey[300],
+                            fontSize: 15,
+                            color: isCompleted ? AppColors.ink : AppColors.inkSoft,
                           ),
                         ),
                       ),
                       if (isCompleted)
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                           decoration: BoxDecoration(
-                            color: const Color(0xFF00A896),
+                            color: AppColors.palm,
                             borderRadius: BorderRadius.circular(10),
                           ),
                           child: const Text(
-                            'UNLOCKED',
+                            'Unlocked',
                             style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 10,
-                              fontWeight: FontWeight.bold,
+                              color: AppColors.parchment,
+                              fontSize: 11,
+                              fontWeight: FontWeight.w600,
                             ),
                           ),
                         ),
@@ -1108,19 +941,16 @@ class _DashboardPageState extends State<DashboardPage> {
                   const SizedBox(height: 2),
                   Text(
                     description,
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: Colors.grey[400],
-                    ),
+                    style: const TextStyle(fontSize: 13, color: AppColors.inkSoft),
                   ),
                   if (!isCompleted && progressText.isNotEmpty) ...[
                     const SizedBox(height: 4),
                     Text(
                       progressText,
-                      style: TextStyle(
+                      style: const TextStyle(
                         fontSize: 12,
-                        color: const Color(0xFF00A896),
-                        fontWeight: FontWeight.w500,
+                        color: AppColors.palm,
+                        fontWeight: FontWeight.w600,
                       ),
                     ),
                   ],
@@ -1128,9 +958,9 @@ class _DashboardPageState extends State<DashboardPage> {
               ),
             ),
             Icon(
-              isCompleted ? Icons.check_circle : Icons.circle_outlined,
-              color: isCompleted ? const Color(0xFF00A896) : Colors.grey,
-              size: 24,
+              isCompleted ? Icons.check_circle_rounded : Icons.circle_outlined,
+              color: isCompleted ? AppColors.palm : AppColors.inkSoft,
+              size: 22,
             ),
           ],
         ),

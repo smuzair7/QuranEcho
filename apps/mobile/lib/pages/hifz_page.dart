@@ -14,6 +14,7 @@ import 'package:provider/provider.dart';
 import 'package:QuranEcho/services/user_stats_service.dart';
 import 'package:QuranEcho/services/user_provider.dart';
 import 'package:QuranEcho/config/app_config.dart';
+import 'package:QuranEcho/theme/app_theme.dart';
 
 class HifzPage extends StatefulWidget {
   const HifzPage({super.key});
@@ -524,7 +525,7 @@ class _HifzPageState extends State<HifzPage> {
       builder: (context) => AlertDialog(
         title: Row(
           children: [
-            Icon(Icons.celebration, color: Colors.amber, size: 32),
+            Icon(Icons.celebration, color: AppColors.gold, size: 32),
             const SizedBox(width: 8),
             const Text('MashaAllah!'),
           ],
@@ -541,14 +542,14 @@ class _HifzPageState extends State<HifzPage> {
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: Colors.green.shade50,
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: Colors.green.shade200),
+                color: AppColors.palmSoft,
+                borderRadius: AppRadius.smBorder,
+                border: Border.all(color: AppColors.palm.withOpacity(0.3)),
               ),
               child: const Text(
                 '✅ Surah marked as completed in your progress!',
                 style: TextStyle(
-                  color: Colors.green,
+                  color: AppColors.palmDeep,
                   fontWeight: FontWeight.bold,
                 ),
                 textAlign: TextAlign.center,
@@ -568,10 +569,6 @@ class _HifzPageState extends State<HifzPage> {
               Navigator.pop(context);
               Navigator.pop(context); // Go back to surah list
             },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF00A896),
-              foregroundColor: Colors.white,
-            ),
             child: const Text('Back to Surahs'),
           ),
         ],
@@ -948,10 +945,9 @@ class _HifzPageState extends State<HifzPage> {
               i < transcriptionWords.length - 1 ? '$currentWord ' : currentWord,
           style: TextStyle(
             fontSize: 18,
-            fontFamily: 'Scheherazade',
+            fontFamily: 'Amiri Quran',
             fontWeight: FontWeight.w500,
-            // Change to white for correct words to match dark theme
-            color: isCorrect ? Colors.green : Colors.red,
+            color: isCorrect ? AppColors.palm : AppColors.clay,
           ),
         ),
       );
@@ -968,9 +964,6 @@ class _HifzPageState extends State<HifzPage> {
     return Scaffold(
       appBar: AppBar(
         title: Text(surahName != null ? 'Hifz: $surahName' : 'Hifz'),
-        backgroundColor: const Color(0xFF00A896),
-        foregroundColor: Colors.white,
-        elevation: 0,
       ),
       body: isLoading
           ? const Center(child: CircularProgressIndicator())
@@ -1006,13 +999,13 @@ class _HifzPageState extends State<HifzPage> {
                   const SizedBox(width: 16),
                   Expanded(
                     child: ClipRRect(
-                      borderRadius: BorderRadius.circular(8),
+                      borderRadius: AppRadius.smBorder,
                       child: LinearProgressIndicator(
                         value: ayahs.isEmpty
                             ? 0
                             : (_currentAyahIndex + 1) / ayahs.length,
                         minHeight: 10,
-                        backgroundColor: Colors.grey[300],
+                        backgroundColor: AppColors.line,
                       ),
                     ),
                   ),
@@ -1020,7 +1013,7 @@ class _HifzPageState extends State<HifzPage> {
                   Text(
                     '${_memorizedAyahIndices.length} memorized',
                     style: const TextStyle(
-                      color: Colors.green,
+                      color: AppColors.palm,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
@@ -1033,19 +1026,11 @@ class _HifzPageState extends State<HifzPage> {
               Container(
                 padding: const EdgeInsets.all(20),
                 decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(16),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Theme.of(context).primaryColor.withOpacity(0.3),
-                      spreadRadius: 2,
-                      blurRadius: 8,
-                      offset: const Offset(0, 2),
-                    ),
-                  ],
+                  color: AppColors.card,
+                  borderRadius: AppRadius.mdBorder,
                   border: Border.all(
-                    color: Theme.of(context).primaryColor,
-                    width: 2,
+                    color: AppColors.palm,
+                    width: 1.5,
                   ),
                 ),
                 child: Column(
@@ -1056,13 +1041,13 @@ class _HifzPageState extends State<HifzPage> {
                         Container(
                           padding: const EdgeInsets.all(8),
                           decoration: BoxDecoration(
-                            color: Theme.of(context).primaryColor,
+                            color: AppColors.palm,
                             shape: BoxShape.circle,
                           ),
                           child: Text(
                             '${_currentAyah!['ayahNumber']}',
                             style: const TextStyle(
-                              color: Colors.white,
+                              color: AppColors.parchment,
                               fontWeight: FontWeight.bold,
                             ),
                           ),
@@ -1073,7 +1058,7 @@ class _HifzPageState extends State<HifzPage> {
                           style: TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.bold,
-                            color: Theme.of(context).primaryColor,
+                            color: AppColors.palm,
                           ),
                         ),
                       ],
@@ -1084,9 +1069,9 @@ class _HifzPageState extends State<HifzPage> {
                         _currentAyah!['displayText'] ?? _currentAyah!['text'],
                         style: const TextStyle(
                           fontSize: 28,
-                          fontFamily: 'Scheherazade',
+                          fontFamily: 'Amiri Quran',
                           height: 2.0,
-                          color: Colors.black,
+                          color: AppColors.ink,
                         ),
                         textDirection: TextDirection.rtl,
                         textAlign: TextAlign.center,
@@ -1123,8 +1108,8 @@ class _HifzPageState extends State<HifzPage> {
                           : () => _startRecording(_currentAyah!)),
                   style: ElevatedButton.styleFrom(
                     backgroundColor:
-                        _isRecording ? Colors.red : const Color(0xFF05668D),
-                    foregroundColor: Colors.white,
+                        _isRecording ? AppColors.clay : AppColors.palm,
+                    foregroundColor: AppColors.parchment,
                     // Reduce padding to make button smaller
                     padding: const EdgeInsets.all(12),
                     shape: const CircleBorder(),
@@ -1153,8 +1138,8 @@ class _HifzPageState extends State<HifzPage> {
                       : null,
                   style: ElevatedButton.styleFrom(
                     backgroundColor:
-                        _isPlaying ? Colors.orange : const Color(0xFF028090),
-                    foregroundColor: Colors.white,
+                        _isPlaying ? AppColors.palmDeep : AppColors.gold,
+                    foregroundColor: AppColors.parchment,
                     padding: const EdgeInsets.all(16),
                     shape: const CircleBorder(),
                   ),
@@ -1217,23 +1202,14 @@ class _HifzPageState extends State<HifzPage> {
     final bool isSurahCompleted = _didCompleteSurah;
 
     return Container(
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [
-            Colors.black87,
-            const Color(0xFF121212), // Very dark gray
-          ],
-        ),
-      ),
+      color: AppColors.parchment,
       child: Column(
         children: [
           // Progress indicator
           Container(
             width: double.infinity,
             padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
-            color: isSurahCompleted ? Colors.green.shade800 : const Color(0xFF212121),
+            color: isSurahCompleted ? AppColors.palmSoft : AppColors.parchmentRaised,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
@@ -1249,7 +1225,7 @@ class _HifzPageState extends State<HifzPage> {
                             style: const TextStyle(
                               fontWeight: FontWeight.bold,
                               fontSize: 16,
-                              color: Colors.white,
+                              color: AppColors.ink,
                             ),
                           );
                         } else {
@@ -1259,7 +1235,7 @@ class _HifzPageState extends State<HifzPage> {
                             style: const TextStyle(
                               fontWeight: FontWeight.bold,
                               fontSize: 16,
-                              color: Colors.white,
+                              color: AppColors.ink,
                             ),
                           );
                         }
@@ -1267,14 +1243,14 @@ class _HifzPageState extends State<HifzPage> {
                     ),
                     if (isSurahCompleted) ...[
                       const SizedBox(width: 8),
-                      Icon(Icons.check_circle, color: Colors.white, size: 20),
+                      const Icon(Icons.check_circle, color: AppColors.palm, size: 20),
                       const SizedBox(width: 4),
-                      Text(
-                        'COMPLETED!',
-                        style: const TextStyle(
+                      const Text(
+                        'Completed!',
+                        style: TextStyle(
                           fontWeight: FontWeight.bold,
                           fontSize: 14,
-                          color: Colors.white,
+                          color: AppColors.palm,
                         ),
                       ),
                     ],
@@ -1296,9 +1272,9 @@ class _HifzPageState extends State<HifzPage> {
                       borderRadius: BorderRadius.circular(4),
                       child: LinearProgressIndicator(
                         value: progress,
-                        backgroundColor: Colors.grey.shade800,
-                        valueColor: AlwaysStoppedAnimation<Color>(
-                          isSurahCompleted ? Colors.green : Theme.of(context).primaryColor
+                        backgroundColor: AppColors.line,
+                        valueColor: const AlwaysStoppedAnimation<Color>(
+                          AppColors.palm,
                         ),
                         minHeight: 8,
                       ),
@@ -1313,15 +1289,15 @@ class _HifzPageState extends State<HifzPage> {
           Container(
             width: double.infinity,
             padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
-            color: const Color(0xFF1E1E1E),
+            color: AppColors.parchmentRaised,
             child: Row(
               children: [
-                Text(
+                const Text(
                   'Go to Ayah: ',
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontWeight: FontWeight.w500,
                     fontSize: 15,
-                    color: Colors.white70,
+                    color: AppColors.inkSoft,
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -1329,24 +1305,24 @@ class _HifzPageState extends State<HifzPage> {
                   child: Container(
                     padding: const EdgeInsets.symmetric(horizontal: 12),
                     decoration: BoxDecoration(
-                      color: const Color(0xFF333333),
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: const Color(0xFF555555)),
+                      color: AppColors.card,
+                      borderRadius: AppRadius.smBorder,
+                      border: Border.all(color: AppColors.line),
                     ),
                     child: DropdownButtonHideUnderline(
                       child: DropdownButton<int>(
                         isExpanded: true,
                         value: _currentAyahIndex,
-                        dropdownColor: const Color(0xFF333333),
+                        dropdownColor: AppColors.card,
                         icon: const Icon(Icons.keyboard_arrow_down,
-                            color: Colors.white70),
-                        style: const TextStyle(color: Colors.white),
+                            color: AppColors.inkSoft),
+                        style: const TextStyle(color: AppColors.ink),
                         items: List.generate(ayahs.length, (index) {
                           return DropdownMenuItem<int>(
                             value: index,
                             child: Text(
                               'Ayah ${ayahs[index]['ayahNumber']}',
-                              style: const TextStyle(color: Colors.white),
+                              style: const TextStyle(color: AppColors.ink),
                             ),
                           );
                         }),
@@ -1412,11 +1388,11 @@ class _HifzPageState extends State<HifzPage> {
           if (_memorizedAyahIndices.length >= 2)
             Container(
               padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
-              decoration: BoxDecoration(
-                color: const Color(0xFF1E1E1E),
+              decoration: const BoxDecoration(
+                color: AppColors.parchmentRaised,
                 border: Border(
-                  top: BorderSide(color: const Color(0xFF333333), width: 1),
-                  bottom: BorderSide(color: const Color(0xFF333333), width: 1),
+                  top: BorderSide(color: AppColors.line, width: 1),
+                  bottom: BorderSide(color: AppColors.line, width: 1),
                 ),
               ),
               child: Row(
@@ -1444,8 +1420,8 @@ class _HifzPageState extends State<HifzPage> {
                       );
                     },
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.deepPurple,
-                      foregroundColor: Colors.white,
+                      backgroundColor: AppColors.palmDeep,
+                      foregroundColor: AppColors.parchment,
                       padding: const EdgeInsets.symmetric(
                           horizontal: 20, vertical: 12),
                     ),
@@ -1459,16 +1435,9 @@ class _HifzPageState extends State<HifzPage> {
           // Navigation controls
           Container(
             padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
-            decoration: BoxDecoration(
-              color: const Color(0xFF212121),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.4),
-                  spreadRadius: 1,
-                  blurRadius: 5,
-                  offset: const Offset(0, -3),
-                ),
-              ],
+            decoration: const BoxDecoration(
+              color: AppColors.card,
+              border: Border(top: BorderSide(color: AppColors.line)),
             ),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -1477,8 +1446,8 @@ class _HifzPageState extends State<HifzPage> {
                 ElevatedButton.icon(
                   onPressed: _currentAyahIndex > 0 ? _moveToPreviousAyah : null,
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.grey.shade700,
-                    foregroundColor: Colors.white,
+                    backgroundColor: AppColors.sage,
+                    foregroundColor: AppColors.parchment,
                   ),
                   icon: const Icon(Icons.arrow_back),
                   label: const Text('Previous'),
@@ -1490,8 +1459,8 @@ class _HifzPageState extends State<HifzPage> {
                       ? _moveToNextAyah
                       : null,
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF00A896),
-                    foregroundColor: Colors.white,
+                    backgroundColor: AppColors.palm,
+                    foregroundColor: AppColors.parchment,
                   ),
                   icon: const Icon(Icons.arrow_forward),
                   label: const Text('Next'),
@@ -1512,14 +1481,12 @@ class _HifzPageState extends State<HifzPage> {
 
     return Card(
       margin: const EdgeInsets.symmetric(vertical: 4),
-      elevation: isCurrent ? 4 : 1,
-      // Change card background to white instead of dark
-      color: Colors.white,
+      color: AppColors.card,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: AppRadius.mdBorder,
         side: isCurrent
-            ? BorderSide(color: Theme.of(context).primaryColor, width: 2)
-            : BorderSide.none,
+            ? const BorderSide(color: AppColors.palm, width: 1.5)
+            : const BorderSide(color: AppColors.line),
       ),
       child: Padding(
         padding: const EdgeInsets.all(16.0),
@@ -1531,34 +1498,29 @@ class _HifzPageState extends State<HifzPage> {
                 Container(
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                    color: isCurrent
-                        ? Theme.of(context).primaryColor
-                        : Colors.grey.shade400,
+                    color: isCurrent ? AppColors.palm : AppColors.sage,
                     shape: BoxShape.circle,
                   ),
                   child: Text(
                     '${ayah['ayahNumber']}',
                     style: const TextStyle(
-                      color: Colors.white,
+                      color: AppColors.parchment,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
                 ),
                 const SizedBox(width: 12),
-                // Also update the label text color for better visibility on white background
                 Text(
                   label,
                   style: TextStyle(
                     fontSize: 16,
                     fontWeight: isCurrent ? FontWeight.bold : FontWeight.normal,
-                    // Change to a darker color that works on white background
-                    color: isCurrent
-                        ? Theme.of(context).primaryColor
-                        : Colors.grey.shade800,
+                    color: isCurrent ? AppColors.palm : AppColors.inkSoft,
                   ),
                 ),
                 const Spacer(),
-                if (isMemorized) Icon(Icons.check_circle, color: Colors.green),
+                if (isMemorized)
+                  const Icon(Icons.check_circle, color: AppColors.palm),
               ],
             ),
             const SizedBox(height: 16),
@@ -1569,10 +1531,9 @@ class _HifzPageState extends State<HifzPage> {
                 ayah['displayText'] ?? ayah['text'],
                 style: TextStyle(
                   fontSize: isCurrent ? 26 : 20,
-                  fontFamily: 'Scheherazade',
+                  fontFamily: 'Amiri Quran',
                   height: 1.8,
-                  // Change text color for better contrast on dark background
-                  color: Colors.black,
+                  color: AppColors.ink,
                 ),
                 textDirection: TextDirection.rtl,
                 textAlign: TextAlign.right,
@@ -1609,8 +1570,8 @@ class _HifzPageState extends State<HifzPage> {
                             : () => _startRecording(ayah)),
                     style: ElevatedButton.styleFrom(
                       backgroundColor:
-                          _isRecording ? Colors.red : const Color(0xFF05668D),
-                      foregroundColor: Colors.white,
+                          _isRecording ? AppColors.clay : AppColors.palm,
+                      foregroundColor: AppColors.parchment,
                       // Reduce padding to make button smaller
                       padding: const EdgeInsets.all(12),
                       shape: const CircleBorder(),
@@ -1635,9 +1596,9 @@ class _HifzPageState extends State<HifzPage> {
                           : null,
                       style: ElevatedButton.styleFrom(
                         backgroundColor: _isPlaying
-                            ? Colors.orange
-                            : const Color(0xFF028090),
-                        foregroundColor: Colors.white,
+                            ? AppColors.palmDeep
+                            : AppColors.gold,
+                        foregroundColor: AppColors.parchment,
                         // Make padding same as record button
                         padding: const EdgeInsets.all(12),
                         shape: const CircleBorder(),
@@ -1683,19 +1644,18 @@ class _HifzPageState extends State<HifzPage> {
                   width: double.infinity,
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    // Light background for container
-                    color: Colors.blue.shade50,
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: Colors.blue.shade200),
+                    color: AppColors.parchmentRaised,
+                    borderRadius: AppRadius.smBorder,
+                    border: Border.all(color: AppColors.line),
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
+                      const Text(
                         'Your recitation:',
                         style: TextStyle(
                           fontWeight: FontWeight.bold,
-                          color: Colors.blue.shade800,
+                          color: AppColors.ink,
                         ),
                       ),
                       const SizedBox(height: 8),
@@ -1725,8 +1685,8 @@ class _HifzPageState extends State<HifzPage> {
                         });
                       },
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF05668D),
-                        foregroundColor: Colors.white,
+                        backgroundColor: AppColors.palm,
+                        foregroundColor: AppColors.parchment,
                         padding: const EdgeInsets.all(12),
                         shape: const CircleBorder(),
                       ),
@@ -1744,8 +1704,8 @@ class _HifzPageState extends State<HifzPage> {
                             });
                           },
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.deepPurple,
-                            foregroundColor: Colors.white,
+                            backgroundColor: AppColors.palmDeep,
+                            foregroundColor: AppColors.parchment,
                             padding: const EdgeInsets.all(12),
                             shape: const CircleBorder(),
                           ),
